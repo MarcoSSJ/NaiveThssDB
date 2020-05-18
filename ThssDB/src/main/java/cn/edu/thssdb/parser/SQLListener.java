@@ -48,7 +48,7 @@ public interface SQLListener extends ParseTreeListener {
 	 * Exit a parse tree produced by {@link SQLParser#create_db_stmt}.
 	 * @param ctx the parse tree
 	 */
-	void exitCreate_db_stmt(SQLParser.Create_db_stmtContext ctx);
+	void exitCreate_db_stmt(SQLParser.Create_db_stmtContext ctx) throws IOException, ClassNotFoundException;
 	/**
 	 * Enter a parse tree produced by {@link SQLParser#drop_db_stmt}.
 	 * @param ctx the parse tree
@@ -58,7 +58,7 @@ public interface SQLListener extends ParseTreeListener {
 	 * Exit a parse tree produced by {@link SQLParser#drop_db_stmt}.
 	 * @param ctx the parse tree
 	 */
-	void exitDrop_db_stmt(SQLParser.Drop_db_stmtContext ctx);
+	void exitDrop_db_stmt(SQLParser.Drop_db_stmtContext ctx) throws IOException, ClassNotFoundException;
 	/**
 	 * Enter a parse tree produced by {@link SQLParser#create_user_stmt}.
 	 * @param ctx the parse tree

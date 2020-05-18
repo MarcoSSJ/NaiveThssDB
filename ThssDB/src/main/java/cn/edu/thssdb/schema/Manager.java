@@ -85,7 +85,7 @@ public class Manager {
     }
   }
 
-  private void createDatabaseIfNotExists(String name) throws IOException, ClassNotFoundException {
+  public void createDatabaseIfNotExists(String name) throws IOException, ClassNotFoundException {
     // TODO
     Database database = new Database(name);
     databases.put(name, database);
@@ -97,7 +97,7 @@ public class Manager {
     }
   }
 
-  public void deleteDatabase(String name) {
+  public void deleteDatabase(String name) throws IOException{
     // TODO
     databases.remove(name);
     File db = new File("./data/"+name);
