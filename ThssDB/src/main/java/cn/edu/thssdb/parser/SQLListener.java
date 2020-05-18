@@ -2,6 +2,8 @@
 package cn.edu.thssdb.parser;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
+import java.io.IOException;
+
 /**
  * This interface defines a complete listener for a parse tree produced by
  * {@link SQLParser}.
@@ -16,7 +18,7 @@ public interface SQLListener extends ParseTreeListener {
 	 * Exit a parse tree produced by {@link SQLParser#parse}.
 	 * @param ctx the parse tree
 	 */
-	void exitParse(SQLParser.ParseContext ctx);
+	void exitParse(SQLParser.ParseContext ctx) throws IOException;
 	/**
 	 * Enter a parse tree produced by {@link SQLParser#sql_stmt_list}.
 	 * @param ctx the parse tree

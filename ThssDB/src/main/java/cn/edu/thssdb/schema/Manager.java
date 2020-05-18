@@ -97,7 +97,7 @@ public class Manager {
     }
   }
 
-  private void deleteDatabase(String name) {
+  public void deleteDatabase(String name) {
     // TODO
     databases.remove(name);
     File db = new File("./data/"+name);
