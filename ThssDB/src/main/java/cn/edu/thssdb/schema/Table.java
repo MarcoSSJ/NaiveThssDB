@@ -87,6 +87,8 @@ public class Table implements Iterable<Row>, Serializable {
     Entry entry = row.getEntries().get(primaryIndex);
     try{
       index.get(entry);
+      //exception
+
     }
     catch(KeyNotExistException e){
       index.put(entry, row);
@@ -107,10 +109,7 @@ public class Table implements Iterable<Row>, Serializable {
     }
   }
 
-  public void delete(ArrayList<String> arrayList){
-    String comparator = arrayList.get(0);
-    String attrName = arrayList.get(1);
-    String attrValue = arrayList.get(2);
+  public void delete(String comparator, String attrName, String attrValue){
     int attrIndex = this.getIndex(attrName);
     TableIterator tableIterator = new TableIterator(this);
     Entry attrValueEntry = new Entry(attrValue);
@@ -171,8 +170,69 @@ public class Table implements Iterable<Row>, Serializable {
     return;
   }
 
-  public void update(ArrayList<ArrayList<String>> arrayLists) {
+  public Row getRow(Entry entry){return index.get(entry);}
+
+
+  public void update(String attrToBeUpdate, String valueToBeUpdate, String comparator, String attrName, String attrValue) {
     // TODO
+    int attrToBeUpdateIndex = this.getIndex(attrToBeUpdate);
+    int attrIndex = this.getIndex(attrName);
+    TableIterator tableIterator = new TableIterator(this);
+    Entry attrValueEntry = new Entry(attrValue);
+    Entry valueToBeUpdateEntry = new Entry(valueToBeUpdate);
+    switch (comparator)
+    {
+      case "=":
+        while(tableIterator.hasNext()){
+          Row currentRow = tableIterator.next();
+          if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)==0){
+            currentRow.update(attrToBeUpdateIndex, valueToBeUpdateEntry);
+          }
+        }
+        break;
+      case "<":
+        while(tableIterator.hasNext()){
+          Row currentRow = tableIterator.next();
+          if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)<0){
+            currentRow.update(attrToBeUpdateIndex, valueToBeUpdateEntry);
+          }
+        }
+        break;
+      case ">":
+        while(tableIterator.hasNext()){
+          Row currentRow = tableIterator.next();
+          if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)>0){
+            currentRow.update(attrToBeUpdateIndex, valueToBeUpdateEntry);
+          }
+        }
+        break;
+      case "<=":
+        while(tableIterator.hasNext()){
+          Row currentRow = tableIterator.next();
+          if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)<=0){
+            currentRow.update(attrToBeUpdateIndex, valueToBeUpdateEntry);
+          }
+        }
+        break;
+      case ">=":
+        while(tableIterator.hasNext()){
+          Row currentRow = tableIterator.next();
+          if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)>=0){
+            currentRow.update(attrToBeUpdateIndex, valueToBeUpdateEntry);
+          }
+        }
+        break;
+      case "<>":
+        while(tableIterator.hasNext()){
+          Row currentRow = tableIterator.next();
+          if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)!=0){
+            currentRow.update(attrToBeUpdateIndex, valueToBeUpdateEntry);
+          }
+        }
+        break;
+      default:
+        break;
+    }
     return;
   }
 

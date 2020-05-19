@@ -249,11 +249,7 @@ public class myListener extends SQLBaseListener{
         String attrValue = ctx.multiple_condition().condition().expression(1).getText();
         System.out.println(attrName);
         System.out.println(attrValue);
-        ArrayList<String> arrayList = new ArrayList<>();
-        arrayList.add(comparator);
-        arrayList.add(attrName);
-        arrayList.add(attrValue);
-        currentTable.delete(arrayList);
+        currentTable.delete(comparator, attrName, attrValue);
         //由于表的delete方法的参数是主键，所以首先找到所有被删除的行的主键
         /*ArrayList<Entry> deleteEntries = new ArrayList<>(); //被删除的行的主键
         //找到传入的语句中的attrName是第几列
@@ -342,13 +338,14 @@ public class myListener extends SQLBaseListener{
         String valueTobeUpdated = ctx.expression().getText();
         System.out.println(valueTobeUpdated);
         //TODO:找到哪个表
-        Table currentTable = manager.getCurrentDB().getTable(tableName);
+        Table currentTable = manager.database.getTable(tableName);
         // 更新哪一行，找到主键
         String comparator = ctx.multiple_condition().condition().comparator().getText();
         String attrName = ctx.multiple_condition().condition().expression(0).getText();
         String attrValue = ctx.multiple_condition().condition().expression(1).getText();
+        currentTable.update(attrToBeUpdated, valueTobeUpdated, comparator, attrName, attrValue);
         // 条件中的attrName是第几列
-        int attrNameIndex = 0;
+        /*int attrNameIndex = 0;
         ArrayList<Column> currentColumns = currentTable.columns;
         for(int i=0;i<currentTable.columns.size();i++){
             if(currentColumns.get(i).name.equals(attrName)){
@@ -445,7 +442,7 @@ public class myListener extends SQLBaseListener{
             Row newRow = new Row(newRowEntries);
             //TODO：更新表
 //            currentTable.update(updateEntry, newRow);
-        }
+        }*/
     }
 
     @Override
