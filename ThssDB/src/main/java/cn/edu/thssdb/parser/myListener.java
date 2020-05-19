@@ -331,6 +331,124 @@ public class myListener extends SQLBaseListener{
     }
 
     @Override
+    public void exitUpdate_stmt(SQLParser.Update_stmtContext ctx) {
+        // 更新哪个表
+        String tableName = ctx.table_name().getText();
+        System.out.println(tableName);
+        // 更新哪一列
+        String attrToBeUpdated = ctx.column_name().getText();
+        System.out.println(attrToBeUpdated);
+        // 更新为何值
+        String valueTobeUpdated = ctx.expression().getText();
+        System.out.println(valueTobeUpdated);
+        //TODO:找到哪个表
+        Table currentTable = manager.getCurrentDB().getTable(tableName);
+        // 更新哪一行，找到主键
+        String comparator = ctx.multiple_condition().condition().comparator().getText();
+        String attrName = ctx.multiple_condition().condition().expression(0).getText();
+        String attrValue = ctx.multiple_condition().condition().expression(1).getText();
+        // 条件中的attrName是第几列
+        int attrNameIndex = 0;
+        ArrayList<Column> currentColumns = currentTable.columns;
+        for(int i=0;i<currentTable.columns.size();i++){
+            if(currentColumns.get(i).name.equals(attrName)){
+                attrNameIndex = i;
+                break;
+            }
+        }
+        // 更新中的attrToBeUpdated是第几列
+        int attrToBeUpdatedIndex = 0;
+        for(int i=0;i<currentTable.columns.size();i++){
+            if(currentColumns.get(i).name.equals(attrToBeUpdated)){
+                attrToBeUpdatedIndex = i;
+                break;
+            }
+        }
+        int primaryIndex = currentTable.primaryIndex;
+        Entry attrValueEntry = new Entry(attrValue);
+        ArrayList<Entry> updateEntries = new ArrayList<>(); //被更新的行的主键
+        Iterator<Row> iterator = currentTable.iterator();
+        switch (comparator){
+            case "=":
+                while(iterator.hasNext()){
+                    Row currentRow = iterator.next();
+                    System.out.println(currentRow);
+                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)==0){
+                        updateEntries.add(currentRow.getEntries().get(primaryIndex));
+                    }
+                }
+                break;
+            case "<":
+                while(iterator.hasNext()){
+                    Row currentRow = iterator.next();
+                    System.out.println(currentRow);
+                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)<0){
+                        updateEntries.add(currentRow.getEntries().get(primaryIndex));
+                    }
+                }
+                break;
+            case ">":
+                while(iterator.hasNext()){
+                    Row currentRow = iterator.next();
+                    System.out.println(currentRow);
+                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)>0){
+                        updateEntries.add(currentRow.getEntries().get(primaryIndex));
+                    }
+                }
+                break;
+            case "<=":
+                while(iterator.hasNext()){
+                    Row currentRow = iterator.next();
+                    System.out.println(currentRow);
+                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)<=0){
+                        updateEntries.add(currentRow.getEntries().get(primaryIndex));
+                    }
+                }
+                break;
+            case ">=":
+                while(iterator.hasNext()){
+                    Row currentRow = iterator.next();
+                    System.out.println(currentRow);
+                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)>=0){
+                        updateEntries.add(currentRow.getEntries().get(primaryIndex));
+                    }
+                }
+                break;
+            case "<>":
+                while(iterator.hasNext()){
+                    Row currentRow = iterator.next();
+                    System.out.println(currentRow);
+                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)!=0){
+                        updateEntries.add(currentRow.getEntries().get(primaryIndex));
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+        for (Entry updateEntry : updateEntries) {
+            System.out.println(updateEntry);
+            //TODO：从数据库表里面把要改的行拿出来
+            Row updateRow = currentTable.getRow(updateEntry);
+            System.out.println(updateRow);
+            ArrayList<Entry> updateRowEntries = updateRow.getEntries();
+            Entry[] newRowEntries = new Entry[updateRowEntries.size()];
+            //ArrayList<Entry> newRowEntries = new ArrayList<>();
+            for (int j = 0; j < updateRowEntries.size(); j++) {
+                if (j == attrToBeUpdatedIndex) {
+                    newRowEntries[j] = new Entry(valueTobeUpdated);
+                } else {
+                    newRowEntries[j] = updateRowEntries.get(j);
+                }
+            }
+            //updateRowEntries.get(attrToBeUpdatedIndex) = new Entry(valueTobeUpdated);
+            Row newRow = new Row(newRowEntries);
+            //TODO：更新表
+//            currentTable.update(updateEntry, newRow);
+        }
+    }
+
+    @Override
     public void exitParse(SQLParser.ParseContext ctx){
         //退出数据库操作，进行持久化等操作，需要接口
         try {
