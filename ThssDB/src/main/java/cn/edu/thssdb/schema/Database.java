@@ -73,6 +73,10 @@ public class Database {
     tables.put(name, table);
   }
 
+  public Table getTable(String name){
+    return tables.get(name);
+  }
+
   public void drop(String name) {
     // TODO
     if(tables.get(name)==null){

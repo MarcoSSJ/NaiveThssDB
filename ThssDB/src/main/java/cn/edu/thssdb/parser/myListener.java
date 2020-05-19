@@ -235,6 +235,7 @@ public class myListener extends SQLBaseListener{
 //            status.msg+="Some of your insert values cannot be null.\n";
 //        }
         //TODO：在这里进行插入
+        currentTable.insert(insertRow);
     }
 
     @Override
@@ -248,8 +249,13 @@ public class myListener extends SQLBaseListener{
         String attrValue = ctx.multiple_condition().condition().expression(1).getText();
         System.out.println(attrName);
         System.out.println(attrValue);
+        ArrayList<String> arrayList = new ArrayList<>();
+        arrayList.add(comparator);
+        arrayList.add(attrName);
+        arrayList.add(attrValue);
+        currentTable.delete(arrayList);
         //由于表的delete方法的参数是主键，所以首先找到所有被删除的行的主键
-        ArrayList<Entry> deleteEntries = new ArrayList<>(); //被删除的行的主键
+        /*ArrayList<Entry> deleteEntries = new ArrayList<>(); //被删除的行的主键
         //找到传入的语句中的attrName是第几列
         int attrNameIndex = 0;
         ArrayList<Column> currentColumns = currentTable.columns;
@@ -321,7 +327,7 @@ public class myListener extends SQLBaseListener{
         }
         for (Entry deleteEntry : deleteEntries) {
             currentTable.delete(deleteEntry);
-        }
+        }*/
     }
 
     @Override

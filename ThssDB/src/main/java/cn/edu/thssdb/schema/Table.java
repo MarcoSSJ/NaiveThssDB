@@ -107,6 +107,70 @@ public class Table implements Iterable<Row>, Serializable {
     }
   }
 
+  public void delete(ArrayList<String> arrayList){
+    String comparator = arrayList.get(0);
+    String attrName = arrayList.get(1);
+    String attrValue = arrayList.get(2);
+    int attrIndex = this.getIndex(attrName);
+    TableIterator tableIterator = new TableIterator(this);
+    Entry attrValueEntry = new Entry(attrValue);
+    switch (comparator)
+    {
+      case "=":
+        while(tableIterator.hasNext()){
+          Row currentRow = tableIterator.next();
+          //System.out.println(currentRow);
+          if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)==0){
+            index.remove(currentRow.getEntries().get(primaryIndex));
+          }
+        }
+        break;
+      case "<":
+        while(tableIterator.hasNext()){
+          Row currentRow = tableIterator.next();
+          if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)<0){
+            index.remove(currentRow.getEntries().get(primaryIndex));
+          }
+        }
+        break;
+      case ">":
+        while(tableIterator.hasNext()){
+          Row currentRow = tableIterator.next();
+          if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)>0){
+            index.remove(currentRow.getEntries().get(primaryIndex));
+          }
+        }
+        break;
+      case "<=":
+        while(tableIterator.hasNext()){
+          Row currentRow = tableIterator.next();
+          if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)<=0){
+            index.remove(currentRow.getEntries().get(primaryIndex));
+          }
+        }
+        break;
+      case ">=":
+        while(tableIterator.hasNext()){
+          Row currentRow = tableIterator.next();
+          if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)>=0){
+            index.remove(currentRow.getEntries().get(primaryIndex));
+          }
+        }
+        break;
+      case "<>":
+        while(tableIterator.hasNext()){
+          Row currentRow = tableIterator.next();
+          if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)!=0){
+            index.remove(currentRow.getEntries().get(primaryIndex));
+          }
+        }
+        break;
+      default:
+        break;
+    }
+    return;
+  }
+
   public void update(ArrayList<ArrayList<String>> arrayLists) {
     // TODO
     return;
