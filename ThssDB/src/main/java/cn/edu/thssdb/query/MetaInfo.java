@@ -16,12 +16,6 @@ class MetaInfo {
 
   int columnFind(String name) {
     // TODO
-    for(int i=0;i<columns.size();i++){
-      int c_int=columns.get(i).compareTo(name);
-      boolean ret=(c_int==0)?true:false;
-      if(ret)
-        return i;
-    }
-    return -1;
+    return 0;
   }
 }
