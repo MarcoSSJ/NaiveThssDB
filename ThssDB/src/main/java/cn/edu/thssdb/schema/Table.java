@@ -18,7 +18,7 @@ public class Table implements Iterable<Row>, Serializable {
   public String tableName;
   public ArrayList<Column> columns;
   public BPlusTree<Entry, Row> index;
-  private int primaryIndex;
+  public int primaryIndex;
 
   public static void main(String[] args) throws IOException, ClassNotFoundException {
     Column column = new Column("c1", ColumnType.INT, 1, false, 100);

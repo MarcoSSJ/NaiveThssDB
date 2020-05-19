@@ -1,13 +1,12 @@
 package cn.edu.thssdb.parser;
 
-import cn.edu.thssdb.schema.Column;
-import cn.edu.thssdb.schema.Database;
-import cn.edu.thssdb.schema.Manager;
+import cn.edu.thssdb.schema.*;
 import cn.edu.thssdb.type.ColumnType;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 public class myListener extends SQLBaseListener{
@@ -42,14 +41,14 @@ public class myListener extends SQLBaseListener{
     public void exitUse_db_stmt(SQLParser.Use_db_stmtContext ctx) {
         String dbName = ctx.database_name().getText();
         //改变数据库
-        manager.switchDatabase(dbName);
-
+        manager.use(dbName);
+        //switchDatabase里面是空的……
     }
 
     @Override
     public void exitDrop_table_stmt(SQLParser.Drop_table_stmtContext ctx) {
         String tableName = ctx.table_name().getText();
-        //删除表
+        //删除整个表
         manager.database.drop(tableName);
     }
 
@@ -140,6 +139,173 @@ public class myListener extends SQLBaseListener{
         //TODO:
         //建立表的接口
         manager.database.create(tableName, columns);
+    }
+
+    @Override
+    public void exitInsert_stmt(SQLParser.Insert_stmtContext ctx) {
+        String tableName = ctx.table_name().getText();
+        List<SQLParser.Column_nameContext> column_nameContexts = ctx.column_name();
+        //看是否是默认插入，INSERT INTO person VALUES (‘Bob’, 15)或INSERT INTO person(name) VALUES (‘Bob’)
+        int numOfColumn = column_nameContexts.size();
+        String[] columnNames = new String[numOfColumn];
+        for(int i=0;i<numOfColumn;i++)
+        {
+            columnNames[i] = column_nameContexts.get(i).getText();
+        }
+        //System.out.println("columnNum: "+numOfColumn);
+        //List<SQLParser.Value_entryContext> value_entryContexts = ctx.value_entry();
+
+        //TODO：这里处理value为什么要这么处理我也不知道，到时候测试时试验一下
+        String rawEntryValue = ctx.value_entry(0).getText();
+        // 去空格
+        rawEntryValue = rawEntryValue.trim();
+        // 去括号
+        StringBuilder rawWithoutBrace = new StringBuilder();
+        for(int i=1;i<rawEntryValue.length()-1;i++)
+        {
+            rawWithoutBrace.append(rawEntryValue.charAt(i));
+        }
+        //System.out.println(rawWithoutBrace);
+        String[] entryValues = rawWithoutBrace.toString().split(",");
+        int numOfEntries = entryValues.length;
+        //System.out.println("entryNum: "+numOfEntries);
+
+        //TODO：这里需要找到表，这里有问题
+        Table currentTable = manager.database.getTable(tableName);
+
+        Entry[] entries = new Entry[numOfEntries];
+        //System.out.println(Arrays.toString(entries));
+        for(int i=0;i<numOfEntries;i++)
+        {
+            entries[i] = new Entry(entryValues[i]);
+        }
+        //System.out.println(Arrays.toString(entries));
+        Row insertRow;
+
+        if(numOfColumn == 0)
+        {
+            // 默认输入，类似INSERT INTO person VALUES (‘Bob’, 15)，entries不调整
+            insertRow = new Row(entries);
+        }
+        else
+        {
+            //类似INSERT INTO person(name) VALUES (‘Bob’)
+            int numOfRealColumns = currentTable.columns.size();
+            Entry[] realEntries = new Entry[numOfRealColumns];
+            for(int i=0;i<numOfRealColumns;i++)
+            {
+                realEntries[i] = new Entry(null);
+            }
+            for(int i=0;i<numOfColumn;i++)
+            {
+                //check every column
+                int index;
+                //这里在找插入的是哪一个属性
+                for(index = 0; index < numOfRealColumns; index++)
+                {
+                    if(currentTable.columns.get(index).name.equals(columnNames[i]))
+                    {
+                        break;
+                    }
+                }
+                realEntries[index] = new Entry(entries[i]);
+            }
+            insertRow = new Row(realEntries);
+        }
+
+//        try
+//        {
+//            currentTable.insert(insertRow);
+//        }catch(NDException e)
+//        {
+//            success = false;
+//            status.msg+="Some of your insert values cannot be null.\n";
+//        }
+        //TODO：在这里进行插入
+    }
+
+    @Override
+    public void exitDelete_stmt(SQLParser.Delete_stmtContext ctx) {
+        String tableName = ctx.table_name().getText();
+        //TODO：这里需要找到是哪张表
+        Table currentTable = manager.database.getTable(tableName);
+        String comparator = ctx.multiple_condition().condition().comparator().getText();
+        System.out.println(comparator);
+        String attrName = ctx.multiple_condition().condition().expression(0).getText();
+        String attrValue = ctx.multiple_condition().condition().expression(1).getText();
+        System.out.println(attrName);
+        System.out.println(attrValue);
+        //由于表的delete方法的参数是主键，所以首先找到所有被删除的行的主键
+        ArrayList<Entry> deleteEntries = new ArrayList<>(); //被删除的行的主键
+        //找到传入的语句中的attrName是第几列
+        int attrNameIndex = 0;
+        ArrayList<Column> currentColumns = currentTable.columns;
+        for(int i=0;i<currentTable.columns.size();i++){
+            System.out.println(currentColumns.get(i).name);
+            if(currentColumns.get(i).name.equals(attrName)){
+                attrNameIndex = i;
+                break;
+            }
+        }
+        int primaryIndex = currentTable.primaryIndex;
+        Entry attrValueEntry = new Entry(attrValue);
+        Iterator<Row> iterator = currentTable.iterator();
+        switch (comparator){
+            case "=":
+                while(iterator.hasNext()){
+                    Row currentRow = iterator.next();
+                    //System.out.println(currentRow);
+                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)==0){
+                        deleteEntries.add(currentRow.getEntries().get(primaryIndex));
+                    }
+                }
+                break;
+            case "<":
+                while(iterator.hasNext()){
+                    Row currentRow = iterator.next();
+                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)<0){
+                        deleteEntries.add(currentRow.getEntries().get(primaryIndex));
+                    }
+                }
+                break;
+            case ">":
+                while(iterator.hasNext()){
+                    Row currentRow = iterator.next();
+                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)>0){
+                        deleteEntries.add(currentRow.getEntries().get(primaryIndex));
+                    }
+                }
+                break;
+            case "<=":
+                while(iterator.hasNext()){
+                    Row currentRow = iterator.next();
+                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)<=0){
+                        deleteEntries.add(currentRow.getEntries().get(primaryIndex));
+                    }
+                }
+                break;
+            case ">=":
+                while(iterator.hasNext()){
+                    Row currentRow = iterator.next();
+                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)>=0){
+                        deleteEntries.add(currentRow.getEntries().get(primaryIndex));
+                    }
+                }
+                break;
+            case "<>":
+                while(iterator.hasNext()){
+                    Row currentRow = iterator.next();
+                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)!=0){
+                        deleteEntries.add(currentRow.getEntries().get(primaryIndex));
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+        for (Entry deleteEntry : deleteEntries) {
+            currentTable.delete(deleteEntry);
+        }
     }
 
     @Override

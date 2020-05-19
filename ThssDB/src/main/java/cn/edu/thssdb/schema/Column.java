@@ -5,7 +5,7 @@ import cn.edu.thssdb.type.ColumnType;
 import java.io.Serializable;
 
 public class Column implements Comparable<Column>, Serializable {
-  private String name;
+  public String name;
   private ColumnType type;
   private int primary;
   private boolean notNull;
