@@ -88,7 +88,7 @@ public interface SQLListener extends ParseTreeListener {
 	 * Exit a parse tree produced by {@link SQLParser#create_table_stmt}.
 	 * @param ctx the parse tree
 	 */
-	void exitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx);
+	void exitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx) throws IOException, ClassNotFoundException;
 	/**
 	 * Enter a parse tree produced by {@link SQLParser#show_meta_stmt}.
 	 * @param ctx the parse tree

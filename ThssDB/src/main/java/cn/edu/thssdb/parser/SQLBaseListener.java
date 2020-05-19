@@ -108,7 +108,7 @@ public class SQLBaseListener implements SQLListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx) { }
+	@Override public void exitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx) throws IOException, ClassNotFoundException { }
 	/**
 	 * {@inheritDoc}
 	 *

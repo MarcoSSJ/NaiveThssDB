@@ -54,7 +54,7 @@ public class myListener extends SQLBaseListener{
     }
 
     @Override
-    public void exitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx) {
+    public void exitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx) throws IOException, ClassNotFoundException {
         String tableName = ctx.table_name().getText();
         List<SQLParser.Column_defContext> columnDefCtxs = ctx.column_def();
         int numOfColumns = columnDefCtxs.size();
@@ -139,6 +139,7 @@ public class myListener extends SQLBaseListener{
 //        }
         //TODO:
         //建立表的接口
+        manager.database.create(tableName, columns);
     }
 
     @Override
