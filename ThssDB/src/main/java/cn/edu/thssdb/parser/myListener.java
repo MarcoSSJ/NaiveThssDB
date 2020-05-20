@@ -156,6 +156,8 @@ public class myListener extends SQLBaseListener{
 
     @Override
     public void exitInsert_stmt(SQLParser.Insert_stmtContext ctx) {
+        //TODO:检测主键为空和重复主键的问题
+
         String tableName = ctx.table_name().getText();
         List<SQLParser.Column_nameContext> column_nameContexts = ctx.column_name();
         //看是否是默认插入，INSERT INTO person VALUES (‘Bob’, 15)或INSERT INTO person(name) VALUES (‘Bob’)
@@ -225,23 +227,12 @@ public class myListener extends SQLBaseListener{
             }
             insertRow = new Row(realEntries);
         }
-
-//        try
-//        {
-//            currentTable.insert(insertRow);
-//        }catch(NDException e)
-//        {
-//            success = false;
-//            status.msg+="Some of your insert values cannot be null.\n";
-//        }
-        //TODO：在这里进行插入
         currentTable.insert(insertRow);
     }
 
     @Override
     public void exitDelete_stmt(SQLParser.Delete_stmtContext ctx) {
         String tableName = ctx.table_name().getText();
-        //TODO：这里需要找到是哪张表
         Table currentTable = manager.database.getTable(tableName);
         String comparator = ctx.multiple_condition().condition().comparator().getText();
         System.out.println(comparator);
@@ -250,80 +241,6 @@ public class myListener extends SQLBaseListener{
         System.out.println(attrName);
         System.out.println(attrValue);
         currentTable.delete(comparator, attrName, attrValue);
-        //由于表的delete方法的参数是主键，所以首先找到所有被删除的行的主键
-        /*ArrayList<Entry> deleteEntries = new ArrayList<>(); //被删除的行的主键
-        //找到传入的语句中的attrName是第几列
-        int attrNameIndex = 0;
-        ArrayList<Column> currentColumns = currentTable.columns;
-        for(int i=0;i<currentTable.columns.size();i++)
-        {
-            System.out.println(currentColumns.get(i).name);
-            if(currentColumns.get(i).name.equals(attrName))
-            {
-                attrNameIndex = i;
-                break;
-            }
-        }
-        int primaryIndex = currentTable.primaryIndex;
-        Entry attrValueEntry = new Entry(attrValue);
-        Iterator<Row> iterator = currentTable.iterator();
-        switch (comparator)
-        {
-            case "=":
-                while(iterator.hasNext()){
-                    Row currentRow = iterator.next();
-                    //System.out.println(currentRow);
-                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)==0){
-                        deleteEntries.add(currentRow.getEntries().get(primaryIndex));
-                    }
-                }
-                break;
-            case "<":
-                while(iterator.hasNext()){
-                    Row currentRow = iterator.next();
-                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)<0){
-                        deleteEntries.add(currentRow.getEntries().get(primaryIndex));
-                    }
-                }
-                break;
-            case ">":
-                while(iterator.hasNext()){
-                    Row currentRow = iterator.next();
-                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)>0){
-                        deleteEntries.add(currentRow.getEntries().get(primaryIndex));
-                    }
-                }
-                break;
-            case "<=":
-                while(iterator.hasNext()){
-                    Row currentRow = iterator.next();
-                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)<=0){
-                        deleteEntries.add(currentRow.getEntries().get(primaryIndex));
-                    }
-                }
-                break;
-            case ">=":
-                while(iterator.hasNext()){
-                    Row currentRow = iterator.next();
-                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)>=0){
-                        deleteEntries.add(currentRow.getEntries().get(primaryIndex));
-                    }
-                }
-                break;
-            case "<>":
-                while(iterator.hasNext()){
-                    Row currentRow = iterator.next();
-                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)!=0){
-                        deleteEntries.add(currentRow.getEntries().get(primaryIndex));
-                    }
-                }
-                break;
-            default:
-                break;
-        }
-        for (Entry deleteEntry : deleteEntries) {
-            currentTable.delete(deleteEntry);
-        }*/
     }
 
     @Override
@@ -337,112 +254,211 @@ public class myListener extends SQLBaseListener{
         // 更新为何值
         String valueTobeUpdated = ctx.expression().getText();
         System.out.println(valueTobeUpdated);
-        //TODO:找到哪个表
         Table currentTable = manager.database.getTable(tableName);
-        // 更新哪一行，找到主键
         String comparator = ctx.multiple_condition().condition().comparator().getText();
         String attrName = ctx.multiple_condition().condition().expression(0).getText();
         String attrValue = ctx.multiple_condition().condition().expression(1).getText();
         currentTable.update(attrToBeUpdated, valueTobeUpdated, comparator, attrName, attrValue);
-        // 条件中的attrName是第几列
-        /*int attrNameIndex = 0;
-        ArrayList<Column> currentColumns = currentTable.columns;
-        for(int i=0;i<currentTable.columns.size();i++){
-            if(currentColumns.get(i).name.equals(attrName)){
-                attrNameIndex = i;
-                break;
+    }
+
+    @Override
+    public void exitSelect_stmt(SQLParser.Select_stmtContext ctx) {
+        /*
+        select_stmt :
+        K_SELECT ( K_DISTINCT | K_ALL )? result_column ( ',' result_column )*
+        K_FROM table_query ( ',' table_query )* ( K_WHERE multiple_condition )? ;
+        */
+        ArrayList<String> resultTables = new ArrayList<>();//列来自什么表 tablename
+        ArrayList<String> resultColumns = new ArrayList<>();//查询哪些列 columnname
+        List<SQLParser.Result_columnContext> result_columnContexts = ctx.result_column();
+
+        //select部分
+        //TODO:select *,设置selectAll = true
+        //TODO:select table_name.*...，table名放在resultTables里面,resultColumns里面放一个*
+        //TODO:select column_name,resultTables里面放*，column名放在resultColumns里面
+        //TODO:select table_name.column_name...，table名放在resultTables里面，column名放在resultColumns里面
+        /*
+        result_column
+        : '*'
+        | table_name '.' '*'
+        | column_full_name;
+        */
+        boolean selectAll = false;
+        if(result_columnContexts.get(0).getText().equals("*"))
+        {
+            //select *
+            selectAll = true;
+        }
+        else
+        {
+            for(SQLParser.Result_columnContext result_columnContext : result_columnContexts)
+            {
+                if(result_columnContext.table_name() != null)
+                {
+                    //table_name.*
+                    resultTables.add(result_columnContext.table_name().getText());
+                    resultColumns.add("*");
+                }
+                else
+                {
+                    //column_full_name
+                    /*
+                    column_full_name:
+                    ( table_name '.' )? column_name ;
+                    */
+                    if(result_columnContext.column_full_name().table_name() == null)
+                    {
+                        //column_name
+                        resultTables.add("*");
+                        resultColumns.add(result_columnContext.column_full_name().column_name().getText());
+                        //System.out.println("result tables: *");
+                    }
+                    else
+                    {
+                        //table_name.column_name
+                        resultTables.add(result_columnContext.column_full_name().table_name().getText());
+                        resultColumns.add(result_columnContext.column_full_name().column_name().getText());
+                    }
+                    //System.out.println(result_columnContexts.get(i).column_full_name().column_name().getText());
+                }
             }
         }
-        // 更新中的attrToBeUpdated是第几列
-        int attrToBeUpdatedIndex = 0;
-        for(int i=0;i<currentTable.columns.size();i++){
-            if(currentColumns.get(i).name.equals(attrToBeUpdated)){
-                attrToBeUpdatedIndex = i;
-                break;
+
+        //from部分
+        //TODO:如果没有join，则是单表查询，isSingleTable为true，表名放在sigleTableName内，其他为空
+        //TODO：有join（两个表），on条件分别是leftTableName.leftArrtName=rightTableName.rightTableAttrName
+        /*
+        table_query :
+        table_name
+        | table_name ( K_JOIN table_name )+ K_ON multiple_condition ;
+        */
+        boolean isSingleTable = false; //单表查询
+        String sigleTableName = "";
+        String leftTableName = "";
+        String rightTableName = "";
+        String leftTableAttrName = "";
+        String rightTableAttrName = "";
+        String temp = "";
+        if(ctx.table_query(0).table_name().size()==1)
+        {
+            //table_name
+            isSingleTable = true;
+            sigleTableName = ctx.table_query(0).table_name(0).getText();
+        }
+        else
+        {
+            //拿到哪两个表做join
+            leftTableName = ctx.table_query(0).table_name(0).getText();
+            rightTableName = ctx.table_query(0).table_name(1).getText();
+
+            //解析on tableName1.attrName1 = tableName2.attrName2
+            leftTableAttrName = ctx.table_query(0)
+                    .multiple_condition()
+                    .condition()
+                    .expression(0)
+                    .comparer()
+                    .column_full_name()
+                    .column_name()
+                    .getText();
+            rightTableAttrName = ctx.table_query(0)
+                    .multiple_condition()
+                    .condition()
+                    .expression(1)
+                    .comparer()
+                    .column_full_name()
+                    .column_name()
+                    .getText();
+            temp = ctx.table_query(0)
+                    .multiple_condition()
+                    .condition()
+                    .expression(0)
+                    .comparer()
+                    .column_full_name()
+                    .table_name()
+                    .getText();
+            //如果顺序是反的，反过来，保证left对应left，right对应right
+            if(!leftTableName.equals(temp))
+            {
+                temp = leftTableName;
+                leftTableName = rightTableName;
+                rightTableName = temp;
             }
         }
-        int primaryIndex = currentTable.primaryIndex;
-        Entry attrValueEntry = new Entry(attrValue);
-        ArrayList<Entry> updateEntries = new ArrayList<>(); //被更新的行的主键
-        Iterator<Row> iterator = currentTable.iterator();
-        switch (comparator){
-            case "=":
-                while(iterator.hasNext()){
-                    Row currentRow = iterator.next();
-                    System.out.println(currentRow);
-                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)==0){
-                        updateEntries.add(currentRow.getEntries().get(primaryIndex));
-                    }
-                }
-                break;
-            case "<":
-                while(iterator.hasNext()){
-                    Row currentRow = iterator.next();
-                    System.out.println(currentRow);
-                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)<0){
-                        updateEntries.add(currentRow.getEntries().get(primaryIndex));
-                    }
-                }
-                break;
-            case ">":
-                while(iterator.hasNext()){
-                    Row currentRow = iterator.next();
-                    System.out.println(currentRow);
-                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)>0){
-                        updateEntries.add(currentRow.getEntries().get(primaryIndex));
-                    }
-                }
-                break;
-            case "<=":
-                while(iterator.hasNext()){
-                    Row currentRow = iterator.next();
-                    System.out.println(currentRow);
-                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)<=0){
-                        updateEntries.add(currentRow.getEntries().get(primaryIndex));
-                    }
-                }
-                break;
-            case ">=":
-                while(iterator.hasNext()){
-                    Row currentRow = iterator.next();
-                    System.out.println(currentRow);
-                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)>=0){
-                        updateEntries.add(currentRow.getEntries().get(primaryIndex));
-                    }
-                }
-                break;
-            case "<>":
-                while(iterator.hasNext()){
-                    Row currentRow = iterator.next();
-                    System.out.println(currentRow);
-                    if(currentRow.getEntries().get(attrNameIndex).compareTo(attrValueEntry)!=0){
-                        updateEntries.add(currentRow.getEntries().get(primaryIndex));
-                    }
-                }
-                break;
-            default:
-                break;
+
+        //TODO:只做只有一个where条件的情况，whereAttrName whereComparator whereAttrValue
+        //where attrName = attrValue
+        /*
+        multiple_condition :
+        condition
+        | multiple_condition AND multiple_condition
+        | multiple_condition OR multiple_condition ;
+        */
+        String whereAttrName = null;
+        String whereComparator = null;
+        String whereAttrValue = null;
+        boolean hasWhere = true;
+        if(ctx.multiple_condition()!=null)
+        {
+            whereAttrName = ctx.multiple_condition()
+                    .condition()
+                    .expression(0)
+                    .comparer()
+                    .column_full_name()
+                    .column_name()
+                    .getText();
+            whereComparator = ctx.multiple_condition()
+                    .condition()
+                    .comparator()
+                    .getText();
+            whereAttrValue = ctx.multiple_condition()
+                    .condition()
+                    .expression(1)
+                    .comparer()
+                    .literal_value()
+                    .getText();
         }
-        for (Entry updateEntry : updateEntries) {
-            System.out.println(updateEntry);
-            //TODO：从数据库表里面把要改的行拿出来
-            Row updateRow = currentTable.getRow(updateEntry);
-            System.out.println(updateRow);
-            ArrayList<Entry> updateRowEntries = updateRow.getEntries();
-            Entry[] newRowEntries = new Entry[updateRowEntries.size()];
-            //ArrayList<Entry> newRowEntries = new ArrayList<>();
-            for (int j = 0; j < updateRowEntries.size(); j++) {
-                if (j == attrToBeUpdatedIndex) {
-                    newRowEntries[j] = new Entry(valueTobeUpdated);
-                } else {
-                    newRowEntries[j] = updateRowEntries.get(j);
+        else
+        {
+            hasWhere = false;
+        }
+
+        if(isSingleTable)
+        {
+            //TODO:单表查询
+            if(selectAll)
+            {
+
+            }
+            else
+            {
+                if(hasWhere == false)
+                {
+                }
+                else
+                {
+
                 }
             }
-            //updateRowEntries.get(attrToBeUpdatedIndex) = new Entry(valueTobeUpdated);
-            Row newRow = new Row(newRowEntries);
-            //TODO：更新表
-//            currentTable.update(updateEntry, newRow);
-        }*/
+
+        }
+        else
+        {
+            //TODO：多表查询
+            if(selectAll)
+            {
+
+            }
+            else
+            {
+                if(hasWhere == false)
+                {
+                }
+                else
+                {
+
+                }
+            }
+        }
     }
 
     @Override

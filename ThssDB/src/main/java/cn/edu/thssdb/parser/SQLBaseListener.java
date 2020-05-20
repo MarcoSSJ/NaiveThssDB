@@ -24,7 +24,7 @@ public class SQLBaseListener implements SQLListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitParse(SQLParser.ParseContext ctx) throws IOException { }
+	@Override public void exitParse(SQLParser.ParseContext ctx){ }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -60,7 +60,7 @@ public class SQLBaseListener implements SQLListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitCreate_db_stmt(SQLParser.Create_db_stmtContext ctx) throws IOException, ClassNotFoundException { }
+	@Override public void exitCreate_db_stmt(SQLParser.Create_db_stmtContext ctx){ }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -72,7 +72,7 @@ public class SQLBaseListener implements SQLListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitDrop_db_stmt(SQLParser.Drop_db_stmtContext ctx) throws IOException, ClassNotFoundException { }
+	@Override public void exitDrop_db_stmt(SQLParser.Drop_db_stmtContext ctx){ }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -108,7 +108,7 @@ public class SQLBaseListener implements SQLListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx) throws IOException, ClassNotFoundException { }
+	@Override public void exitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
