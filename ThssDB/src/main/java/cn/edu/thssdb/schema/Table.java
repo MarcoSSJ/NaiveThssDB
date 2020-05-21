@@ -72,6 +72,8 @@ public class Table implements Iterable<Row>, Serializable {
         }
     }
 
+    public String getDatabaseName(){return databaseName;}
+
     private void recover() throws IOException, ClassNotFoundException {
         // TODO
         try {
@@ -234,69 +236,77 @@ public class Table implements Iterable<Row>, Serializable {
         }
     }
 
-    public void select(ArrayList<ArrayList> conditions){
-        ArrayList arrayList = new ArrayList();
-        ArrayList rows = new ArrayList();
+    public ArrayList<Row> select() {
+        ArrayList rows = new ArrayList<Row>();
         TableIterator tableIterator = new TableIterator(this);
-        if(conditions==null)
+        while(tableIterator.hasNext())
         {
-            if(tableIterator.hasNext()){
-                Row row = tableIterator.next();
-                rows.add(row);
-            }
-            //return rows;
+            Row currentRow = tableIterator.next();
+            rows.add(currentRow);
         }
-        else{
-            ArrayList attrNames = conditions.get(0);
-            ArrayList condition = conditions.get(1);
-            String compareType = condition.get(0).toString();
-            String argv1 = condition.get(1).toString();
-            String argv2 = condition.get(2).toString();
-            int argvIndex1 = getIndex(argv1);
-            int argvIndex2 = getIndex(argv2);
-            while(tableIterator.hasNext()){
-                Row row = tableIterator.next();
-                ArrayList<Entry> entries = row.getEntries();
-                Entry entry1 = entries.get(argvIndex1);
-                Entry entry2 = entries.get(argvIndex2);
-                if(compareType.compareTo("==")==0){
-                    if(entry1.compareTo(entry2)==0){
-                        rows.add(row);
-                    }
-                    else{
-                        continue;
+        return rows;
+    }
+
+    public ArrayList<Row> select(String comparator, String attrName, String attrValue){
+        ArrayList rows = new ArrayList<Row>();
+        TableIterator tableIterator = new TableIterator(this);
+        int attrIndex = this.getIndex(attrName);
+        Entry attrValueEntry = new Entry(attrValue);
+        switch (comparator)
+        {
+            case "=":
+                while(tableIterator.hasNext()){
+                    Row currentRow = tableIterator.next();
+                    //System.out.println(currentRow);
+                    if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)==0){
+                        rows.add(currentRow);
                     }
                 }
-                else if(compareType.compareTo("<")==0) {
-                    if (entry1.compareTo(entry2) < 0) {
-                        rows.add(row);
-                    } else {
-                        continue;
+                break;
+            case "<":
+                while(tableIterator.hasNext()){
+                    Row currentRow = tableIterator.next();
+                    if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)<0){
+                        rows.add(currentRow);
                     }
                 }
-                else if(compareType.compareTo("<=")==0) {
-                    if (entry1.compareTo(entry2) < 0 || entry1.compareTo(entry2)==0) {
-                        rows.add(row);
-                    } else {
-                        continue;
+                break;
+            case ">":
+                while(tableIterator.hasNext()){
+                    Row currentRow = tableIterator.next();
+                    if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)>0){
+                        rows.add(currentRow);
                     }
                 }
-                else if(compareType.compareTo(">")==0){
-                    if(entry1.compareTo(entry2) > 0){
-                        rows.add(row);
-                    } else {
-                        continue;
+                break;
+            case "<=":
+                while(tableIterator.hasNext()){
+                    Row currentRow = tableIterator.next();
+                    if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)<=0){
+                        rows.add(currentRow);
                     }
                 }
-                else if(compareType.compareTo(">=")==0){
-                    if(entry1.compareTo(entry2) > 0||entry1.compareTo(entry2)==0){
-                        rows.add(row);
-                    } else {
-                        continue;
+                break;
+            case ">=":
+                while(tableIterator.hasNext()){
+                    Row currentRow = tableIterator.next();
+                    if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)>=0){
+                        rows.add(currentRow);
                     }
                 }
-            }
+                break;
+            case "<>":
+                while(tableIterator.hasNext()){
+                    Row currentRow = tableIterator.next();
+                    if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)!=0){
+                        rows.add(currentRow);
+                    }
+                }
+                break;
+            default:
+                break;
         }
+        return rows;
     }
 
     private void serialize() throws IOException {
@@ -343,7 +353,7 @@ public class Table implements Iterable<Row>, Serializable {
         return null;
     }
 
-    private int getIndex(String name){
+    public int getIndex(String name){
         int size = columns.size();
         for(int i = 0; i < size; i++){
             if(columns.get(i).compareTo(name)==0){

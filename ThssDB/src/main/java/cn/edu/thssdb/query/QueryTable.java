@@ -3,6 +3,7 @@ package cn.edu.thssdb.query;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Entry;
 import cn.edu.thssdb.schema.Row;
+import cn.edu.thssdb.schema.Table;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,7 +19,7 @@ public class QueryTable implements Iterator<Row> {
   public ArrayList<Column> columns;
   protected ArrayList<Row> rows;
 
-  QueryTable(Row[] m_rows, String m_databaseName, String m_tableName, ArrayList<Column> m_columns) {
+  QueryTable(Table table, Row[] m_rows, String m_databaseName, String m_tableName, ArrayList<Column> m_columns) {
     // TODO
     rows = new ArrayList<Row>(Arrays.asList(m_rows));
     number = rows.size();

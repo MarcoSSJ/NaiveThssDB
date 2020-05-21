@@ -1,5 +1,6 @@
 package cn.edu.thssdb.parser;
 
+import cn.edu.thssdb.query.QueryResult;
 import cn.edu.thssdb.schema.*;
 import cn.edu.thssdb.type.ColumnType;
 
@@ -262,7 +263,7 @@ public class myListener extends SQLBaseListener{
     }
 
     @Override
-    public void exitSelect_stmt(SQLParser.Select_stmtContext ctx) {
+    public void exitSelect_stmt(SQLParser.Select_stmtContext ctx){
         /*
         select_stmt :
         K_SELECT ( K_DISTINCT | K_ALL )? result_column ( ',' result_column )*
@@ -271,6 +272,7 @@ public class myListener extends SQLBaseListener{
         ArrayList<String> resultTables = new ArrayList<>();//列来自什么表 tablename
         ArrayList<String> resultColumns = new ArrayList<>();//查询哪些列 columnname
         List<SQLParser.Result_columnContext> result_columnContexts = ctx.result_column();
+        ArrayList<Row> resultRows = new ArrayList<>(); //查询结果
 
         //select部分
         //TODO:select *,设置selectAll = true
@@ -424,39 +426,46 @@ public class myListener extends SQLBaseListener{
 
         if(isSingleTable)
         {
+            Table table = manager.database.getTable(sigleTableName);
             //TODO:单表查询
             if(selectAll)
             {
-
+                resultRows = table.select();
             }
             else
             {
                 if(hasWhere == false)
                 {
+                    resultRows = table.select();
                 }
                 else
                 {
-
+                    resultRows = table.select(whereComparator, whereAttrName, whereAttrValue);
                 }
             }
 
         }
         else
         {
-            //TODO：多表查询
-            if(selectAll)
-            {
-
+            try {
+                Table leftTable = manager.database.getTable(leftTableName);
+                Table rightTable = manager.database.getTable(rightTableName);
+                QueryResult queryResult = new QueryResult(leftTable, rightTable, leftTableAttrName, rightTableAttrName);
+                //TODO：多表查询
+                if (selectAll) {
+                    resultRows = queryResult.newTable.select();
+                } else {
+                    if (hasWhere == false) {
+                        resultRows = queryResult.newTable.select();
+                    } else {
+                        resultRows = queryResult.newTable.select(whereComparator, whereAttrName, whereAttrValue);
+                    }
+                }
             }
-            else
+            catch (Exception e)
             {
-                if(hasWhere == false)
-                {
-                }
-                else
-                {
+                //TODO: exception
 
-                }
             }
         }
     }
