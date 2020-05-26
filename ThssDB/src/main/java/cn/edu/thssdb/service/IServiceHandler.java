@@ -46,7 +46,8 @@ public class IServiceHandler implements IService.Iface {
     ThssDB thssDB = ThssDB.getInstance();
     ExecuteStatementResp resp = new ExecuteStatementResp();
     if (thssDB.checkSession(req.getSessionId())) {
-      //TODO：进行查询
+      //TODO：进行查询，这个函数在client里面被调用，接着应该调用ThssDB里面的execute函数！
+      // 这里可以拿到sessionid！传给server就可以实现用户控制了！
       // exec
 //      SQLExecuteResult result = thssDB.execute(req.getStatement());
 //      System.out.println("msg:"+result.getMessage());
@@ -55,10 +56,10 @@ public class IServiceHandler implements IService.Iface {
 //      resp.setIsAbort(result.isIsAbort());
 //      resp.setHasResult(result.isHasResult());
 //      if (result.isHasResult())
-        {
+//      {
 //        resp.setColumnsList(result.getColumnList());
 //        resp.setRowList(result.getRowList());
-      }
+//    }
     }
     else {
 //      resp.setStatus(new Status(Global.FAILURE_CODE));

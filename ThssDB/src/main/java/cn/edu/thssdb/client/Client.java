@@ -100,12 +100,14 @@ public class Client {
 		ExecuteStatementReq req = new ExecuteStatementReq(sessionId, msg);
 		try {
 			ExecuteStatementResp resp = client.executeStatement(req);
-			if (resp.isHasResult()) {
-
+			if (resp.hasResult) {
 				//TODO：show result
 				println("Result will be showed here.");
 			}
-			println(resp.getMsg());
+			else
+			{
+				println("错误信息");
+			}
 		} catch (TException e) {
 			logger.error(e.getMessage());
 		}
