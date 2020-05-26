@@ -83,24 +83,6 @@ public class myListener extends SQLBaseListener{
 			List<SQLParser.Column_nameContext> table_constraintContexts = ctx.table_constraint().column_name();
 			if(!table_constraintContexts.isEmpty())
 			{
-				//            List<SQLParser.Column_nameContext> column_nameContexts = ctx.table_constraint().column_name();
-				//            ArrayList<String> primaryNames = new ArrayList<>();
-				//            //int numOfPrimary = column_nameContexts.size();
-				//            for (SQLParser.Column_nameContext column_nameContext : column_nameContexts)
-				//            {
-				//                primaryNames.add(column_nameContext.getText());
-				//            }
-				//            System.out.println(Arrays.toString(primaryNames.toArray()));
-				//            for (int i = 0; i < numOfColumns; i++)
-				//            {
-				//                //System.out.println(columns[i].name());
-				//                if (primaryNames.contains(columns[i].name()))
-				//                {
-				//                    columns[i].setPrimary(1);
-				//                    break;
-				//                }
-				//            }
-				//主键只有一列
 				List<SQLParser.Column_nameContext> column_nameContexts = ctx.table_constraint().column_name();
 				primary = column_nameContexts.get(0).getText();
 			}
@@ -130,7 +112,6 @@ public class myListener extends SQLBaseListener{
 				if(!column_constraintContexts.isEmpty())
 				{
 					String columnConstraint = column_constraintContexts.get(0).getText();
-					//not null only
 					if (columnConstraint.toUpperCase().equals("NOTNULL"))
 					{
 						notNull = true;
@@ -141,102 +122,76 @@ public class myListener extends SQLBaseListener{
 				else
 					columns[i] = new Column(columnName,columnType,0, notNull, maxLength);
 			}
-
-			//        try {
-			//            Database db = manager.getCurrentDB();
-			//            if(db.containsTable(tableName)){
-			//                success = false;
-			//                status.msg += "Duplicated tableName.\n";
-			//            }
-			//            else {
-			//                db.create(tableName, columns);
-			//                status.msg += "Create table successfully.\n";
-			//            }
-			//        }catch (Exception e){
-			//            success = false;
-			//            status.msg+="Failed to create table.";
-			//        }
-			//TODO:
-			//建立表的接口
-
 			manager.database.create(tableName, columns);
 		}
 		catch (Exception e)
 		{}
 	}
 
+
+	/*
+	insert_stmt :
+    K_INSERT K_INTO table_name ( '(' column_name ( ',' column_name )* ')' )?
+        K_VALUES value_entry ( ',' value_entry )* ;
+    */
 	@Override
 	public void exitInsert_stmt(SQLParser.Insert_stmtContext ctx) {
 		//TODO:检测主键为空和重复主键的问题
 
 		String tableName = ctx.table_name().getText();
-		List<SQLParser.Column_nameContext> column_nameContexts = ctx.column_name();
-		//看是否是默认插入，INSERT INTO person VALUES (‘Bob’, 15)或INSERT INTO person(name) VALUES (‘Bob’)
-		int numOfColumn = column_nameContexts.size();
-		String[] columnNames = new String[numOfColumn];
-		for(int i=0;i<numOfColumn;i++)
-		{
-			columnNames[i] = column_nameContexts.get(i).getText();
-		}
-		//System.out.println("columnNum: "+numOfColumn);
-		//List<SQLParser.Value_entryContext> value_entryContexts = ctx.value_entry();
 
-		//TODO：这里处理value为什么要这么处理我也不知道，到时候测试时试验一下
-		String rawEntryValue = ctx.value_entry(0).getText();
-		// 去空格
-		rawEntryValue = rawEntryValue.trim();
-		// 去括号
-		StringBuilder rawWithoutBrace = new StringBuilder();
-		for(int i=1;i<rawEntryValue.length()-1;i++)
-		{
-			rawWithoutBrace.append(rawEntryValue.charAt(i));
-		}
-		//System.out.println(rawWithoutBrace);
-		String[] entryValues = rawWithoutBrace.toString().split(",");
-		int numOfEntries = entryValues.length;
-		//System.out.println("entryNum: "+numOfEntries);
 
-		//TODO：这里需要找到表，这里有问题
+		/*
+		value_entry :
+    	'(' literal_value ( ',' literal_value )* ')' ;
+    	*/
+		//简单版本只取第一个value_entry
+		String origin_value = ctx.value_entry(0).getText().trim();//去空格
+		StringBuilder literal_value = new StringBuilder();
+		for(int i=1;i<origin_value.length()-1;i++)//去括号
+			literal_value.append(origin_value.charAt(i));
+
+		String[] entry_value = literal_value.toString().split(",");//这里拿到每个属性值
+		int entry_num = entry_value.length;
 		Table currentTable = manager.database.getTable(tableName);
 
-		Entry[] entries = new Entry[numOfEntries];
-		//System.out.println(Arrays.toString(entries));
-		for(int i=0;i<numOfEntries;i++)
-		{
-			entries[i] = new Entry(entryValues[i]);
-		}
-		//System.out.println(Arrays.toString(entries));
+		Entry[] entry = new Entry[entry_num];
+		for(int i=0;i<entry_num;i++)
+			entry[i] = new Entry(entry_value[i]);
+
 		Row insertRow;
 
-		if(numOfColumn == 0)
+		List<SQLParser.Column_nameContext> column_names = ctx.column_name();
+		//看是否是默认插入，INSERT INTO person VALUES (‘Bob’, 15)或INSERT INTO person(name) VALUES (‘Bob’)
+		int column_num = column_names.size();
+		if(column_num == 0)
 		{
 			// 默认输入，类似INSERT INTO person VALUES (‘Bob’, 15)，entries不调整
-			insertRow = new Row(entries);
+			insertRow = new Row(entry);
 		}
 		else
 		{
 			//类似INSERT INTO person(name) VALUES (‘Bob’)
-			int numOfRealColumns = currentTable.columns.size();
-			Entry[] realEntries = new Entry[numOfRealColumns];
-			for(int i=0;i<numOfRealColumns;i++)
-			{
-				realEntries[i] = new Entry(null);
-			}
-			for(int i=0;i<numOfColumn;i++)
+			String[] column_name = new String[column_num];
+			for(int i=0;i<column_num;i++)//拿到列名
+				column_name[i] = column_names.get(i).getText();
+
+			int table_column_num = currentTable.columns.size();
+			Entry[] table_entry = new Entry[table_column_num];
+			for(int i=0;i<table_column_num;i++)
+				table_entry[i] = new Entry(null);
+
+			for(int i=0;i<column_num;i++)
 			{
 				//check every column
 				int index;
 				//这里在找插入的是哪一个属性
-				for(index = 0; index < numOfRealColumns; index++)
-				{
-					if(currentTable.columns.get(index).name.equals(columnNames[i]))
-					{
+				for(index = 0; index < table_column_num; index++)
+					if(currentTable.columns.get(index).name.equals(column_name[i]))
 						break;
-					}
-				}
-				realEntries[index] = new Entry(entries[i]);
+				table_entry[index] = new Entry(entry[i]);
 			}
-			insertRow = new Row(realEntries);
+			insertRow = new Row(table_entry);
 		}
 		currentTable.insert(insertRow);
 	}

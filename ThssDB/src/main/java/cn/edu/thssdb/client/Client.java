@@ -1,7 +1,6 @@
 package cn.edu.thssdb.client;
 
-import cn.edu.thssdb.rpc.thrift.GetTimeReq;
-import cn.edu.thssdb.rpc.thrift.IService;
+import cn.edu.thssdb.rpc.thrift.*;
 import cn.edu.thssdb.utils.Global;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -33,6 +32,8 @@ public class Client {
 
 	static final String PORT_ARGS = "p";
 	static final String PORT_NAME = "port";
+
+	private static long sessionId;
 
 	private static final PrintStream SCREEN_PRINTER = new PrintStream(System.out);
 	private static final Scanner SCANNER = new Scanner(System.in);
@@ -68,8 +69,15 @@ public class Client {
 					case Global.QUIT:
 						open = false;
 						break;
+					case Global.CONNECT:
+						connect();
+						break;
+					case Global.DISCONNECT:
+						disconnect();
+						break;
 					default:
-						println("Invalid statements!");
+						//println("Invalid statements!");
+						execute(msg);
 						break;
 				}
 				long endTime = System.currentTimeMillis();
@@ -81,6 +89,68 @@ public class Client {
 			transport.close();
 		} catch (TTransportException e) {
 			logger.error(e.getMessage());
+		}
+	}
+
+	private static void execute(String msg) {
+		if (sessionId == -1) {
+			println("Client is not connected!");
+			return;
+		}
+		ExecuteStatementReq req = new ExecuteStatementReq(sessionId, msg);
+		try {
+			ExecuteStatementResp resp = client.executeStatement(req);
+			if (resp.isHasResult()) {
+
+				//TODO：show result
+				println("Result will be showed here.");
+			}
+			println(resp.getMsg());
+		} catch (TException e) {
+			logger.error(e.getMessage());
+		}
+	}
+
+	private static void connect() {
+		if (sessionId != -1) {
+			println("Client is already connected!");
+			return;
+		}
+		ConnectReq req = new ConnectReq(Global.USERNAME, Global.PASSWORD);
+		try {
+			ConnectResp resp = client.connect(req);
+			if (resp.getStatus().getCode() == Global.SUCCESS_CODE) {
+				sessionId = resp.getSessionId();
+				println("Connection succeeds. Session ID is "+sessionId);
+			}
+			else {
+				println("Connection fails!");
+			}
+		} catch (TException e) {
+			logger.error(e.getMessage());
+		}
+	}
+
+	private static void disconnect() {
+		if (sessionId == -1) {
+			println("Client is not connected!");
+			return;
+		}
+		DisconnetReq req = new DisconnetReq();
+		req.setSessionId(sessionId);
+		try {
+			DisconnetResp resp = client.disconnect(req);
+			if (resp.getStatus().getCode() == Global.SUCCESS_CODE) {
+				println("Disconnect succeed.");
+			}
+			else {
+				println("Error occurs when disconnecting!");
+			}
+		} catch (TException e) {
+			logger.error(e.getMessage());
+		}
+		finally {
+			sessionId = -1;
 		}
 	}
 

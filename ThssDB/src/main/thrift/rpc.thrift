@@ -43,11 +43,13 @@ struct ExecuteStatementResp{
   // only for query
   4: optional list<string> columnsList
   5: optional list<list<string>> rowList
+  6: required string msg;//存放错误信息
+
 }
 
 service IService {
   GetTimeResp getTime(1: GetTimeReq req);
   ConnectResp connect(1: ConnectReq req);
-  DisconnetResp disconnect(1: DisconnetResp req);
+  DisconnetResp disconnect(1: DisconnetReq req);
   ExecuteStatementResp executeStatement(1: ExecuteStatementReq req);
 }

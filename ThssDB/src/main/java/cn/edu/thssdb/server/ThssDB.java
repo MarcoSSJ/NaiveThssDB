@@ -4,12 +4,16 @@ import cn.edu.thssdb.rpc.thrift.IService;
 import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.service.IServiceHandler;
 import cn.edu.thssdb.utils.Global;
+
 import org.apache.thrift.server.TServer;
 import org.apache.thrift.server.TSimpleServer;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class ThssDB {
 
@@ -19,14 +23,19 @@ public class ThssDB {
   private static IService.Processor processor;
   private static TServerSocket transport;
   private static TServer server;
+  private static Manager manager;
 
-  private Manager manager;
+  private static long sessionCnt;
+  private static List<Long> sessionList;
 
   public static ThssDB getInstance() {
     return ThssDBHolder.INSTANCE;
   }
 
   public static void main(String[] args) {
+    sessionCnt = 0;
+    sessionList = new ArrayList<>();
+    manager = Manager.getInstance();
     ThssDB server = ThssDB.getInstance();
     server.start();
   }
@@ -49,8 +58,29 @@ public class ThssDB {
     }
   }
 
+  public long setupSession() {
+    long sessionId = sessionCnt++;
+    sessionList.add(sessionId);
+    return sessionId;
+  }
+
+  public void clearSession(long sessionId) {
+    sessionList.remove(sessionId);
+  }
+
+  public boolean checkSession(long sessionId) {
+    return sessionList.contains(sessionId);
+  }
+
+  //TODO:查询接口
+//  public SQLExecuteResult execute(String sql) {
+//    List<SQLExecuteResult> resultList = manager.execute(sql);
+//    return resultList.get(0);
+//  }
+
   private static class ThssDBHolder {
     private static final ThssDB INSTANCE = new ThssDB();
+
     private ThssDBHolder() {
 
     }

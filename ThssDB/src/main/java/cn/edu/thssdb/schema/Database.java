@@ -85,9 +85,9 @@ public class Database {
     tables.remove(name);
   }
 
-  public String select(QueryTable[] queryTables) {
+  public String select(QueryTable[] queryTables) throws IOException, ClassNotFoundException {
     // TODO
-    QueryResult queryResult = new QueryResult(queryTables);
+    //QueryResult queryResult = new QueryResult(queryTables);
     return null;
   }
 
