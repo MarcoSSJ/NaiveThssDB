@@ -76,6 +76,7 @@ public class IServiceHandler implements IService.Iface {
 //      resp.setHasResult(false);
 //      resp.setMsg("Invalid session ID!");
 		}
+		resp.setStatus(new Status(Global.FAILURE_CODE));
 		return resp;
 	}
 }
