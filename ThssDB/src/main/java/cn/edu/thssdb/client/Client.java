@@ -58,7 +58,7 @@ public class Client {
 			protocol = new TBinaryProtocol(transport);
 			client = new IService.Client(protocol);
 			boolean open = true;
-			while (true) {
+			do {
 				print(Global.CLI_PREFIX);
 				String msg = SCANNER.nextLine();
 				long startTime = System.currentTimeMillis();
@@ -76,58 +76,34 @@ public class Client {
 						disconnect();
 						break;
 					default:
-						//println("Invalid statements!");
 						execute(msg);
 						break;
 				}
 				long endTime = System.currentTimeMillis();
 				println("It costs " + (endTime - startTime) + " ms.");
-				if (!open) {
-					break;
-				}
-			}
+			} while (open);
 			transport.close();
 		} catch (TTransportException e) {
 			logger.error(e.getMessage());
 		}
 	}
 
-	private static void execute(String msg) {
-		if (sessionId == -1) {
-			println("Client is not connected!");
-			return;
-		}
-		ExecuteStatementReq req = new ExecuteStatementReq(sessionId, msg);
-		try {
-			ExecuteStatementResp resp = client.executeStatement(req);
-			if (resp.hasResult) {
-				//TODO：show result
-				println("Result will be showed here.");
-			}
-			else
-			{
-				println("错误信息");
-			}
-		} catch (TException e) {
-			logger.error(e.getMessage());
-		}
-	}
-
 	private static void connect() {
 		if (sessionId != -1) {
-			println("Client is already connected!");
+			println("已连接");
 			return;
 		}
-		ConnectReq req = new ConnectReq(Global.USERNAME, Global.PASSWORD);
 		try {
+			ConnectReq req = new ConnectReq(Global.USERNAME, Global.PASSWORD);
 			ConnectResp resp = client.connect(req);
+
 			if (resp.getStatus().getCode() == Global.SUCCESS_CODE) {
 				sessionId = resp.getSessionId();
-				println("Connection succeeds. Session ID is "+sessionId);
+				println("连接成功，sessionID = " + sessionId);
 			}
-			else {
-				println("Connection fails!");
-			}
+			else
+				println("连接失败，密码错误");
+
 		} catch (TException e) {
 			logger.error(e.getMessage());
 		}
@@ -135,24 +111,42 @@ public class Client {
 
 	private static void disconnect() {
 		if (sessionId == -1) {
-			println("Client is not connected!");
+			println("未连接");
 			return;
 		}
-		DisconnetReq req = new DisconnetReq();
-		req.setSessionId(sessionId);
 		try {
+			DisconnetReq req = new DisconnetReq(sessionId);
 			DisconnetResp resp = client.disconnect(req);
-			if (resp.getStatus().getCode() == Global.SUCCESS_CODE) {
-				println("Disconnect succeed.");
-			}
-			else {
-				println("Error occurs when disconnecting!");
-			}
+
+			if (resp.getStatus().getCode() == Global.SUCCESS_CODE)
+				println("成功离线");
+			else
+				println("离线失败,sessionID有误！");
+
 		} catch (TException e) {
 			logger.error(e.getMessage());
 		}
 		finally {
 			sessionId = -1;
+		}
+	}
+
+	private static void execute(String msg) {
+		if (sessionId == -1) {
+			println("未连接");
+			return;
+		}
+		ExecuteStatementReq req = new ExecuteStatementReq(sessionId, msg);
+		try {
+			ExecuteStatementResp resp = client.executeStatement(req);
+			if (resp.hasResult) {
+				//TODO: 这里调用函数执行语句，并输出结果
+			}
+			else
+				//TODO:输出错误信息
+				println("错误信息");
+		} catch (TException e) {
+			logger.error(e.getMessage());
 		}
 	}
 
