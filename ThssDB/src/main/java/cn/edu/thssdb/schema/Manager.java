@@ -12,6 +12,7 @@ public class Manager {
   private HashMap<String, Database> databases;
   //public Database database;
   private HashMap<Long, String> users;
+  private HashMap<Long, Boolean> transaction;
   private static ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   public static Manager getInstance() {
@@ -26,8 +27,9 @@ public class Manager {
 
   public Manager() {
     // TODO
-    databases = new HashMap<String, Database>();
-    users = new HashMap<Long, String>();
+    databases = new HashMap<>();
+    users = new HashMap<>();
+    transaction = new HashMap<>();
     recover();
   }
 
@@ -122,6 +124,16 @@ public class Manager {
   public Database getDatabase(Long sessionID){
     String name = users.get(sessionID);
     return databases.get(name);
+  }
+
+  public void beginTransaction(Long sessionID){
+    transaction.put(sessionID, Boolean.TRUE);
+  }
+
+  public Boolean isTransaction(Long sessionID){
+    if(transaction.get(sessionID)==null)
+      return Boolean.FALSE;
+    return transaction.get(sessionID);
   }
 
   private static class ManagerHolder {

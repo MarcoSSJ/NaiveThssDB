@@ -33,12 +33,18 @@ public class myListener extends SQLBaseListener{
 
 	@Override
 	public void exitCommit_stmt(SQLParser.Commit_stmtContext ctx){
-
+		Database database = manager.getDatabase(sessionId);
+		try {
+			database.write();
+		}
+		catch (IOException e){
+			//TODO:
+		}
 	}
 
 	@Override
 	public void exitTransaction_stmt(SQLParser.Transaction_stmtContext ctx){
-
+		manager.beginTransaction(sessionId);
 	}
 
 	@Override
@@ -85,7 +91,9 @@ public class myListener extends SQLBaseListener{
 		Database database = manager.getDatabase(sessionId);
 		try {
 			database.drop(tableName);
-			database.write();
+			if(!manager.isTransaction(sessionId)) {
+				database.write();
+			}
 		}
 		catch (IOException e) {
 			//TODO:删除失败
@@ -144,9 +152,11 @@ public class myListener extends SQLBaseListener{
 				else
 					columns[i] = new Column(columnName,columnType,0, notNull, maxLength);
 			}
-			Database db = manager.getDatabase(sessionId);
-			db.create(tableName, columns);
-			db.write();
+			Database database = manager.getDatabase(sessionId);
+			database.create(tableName, columns);
+			if(!manager.isTransaction(sessionId)) {
+				database.write();
+			}
 			//manager.database.create(tableName, columns);
 		}
 		catch (Exception e)
@@ -224,7 +234,12 @@ public class myListener extends SQLBaseListener{
 		}
 		try {
 			currentTable.insert(insertRow);
-			currentTable.write();
+			if(manager.isTransaction(sessionId)==true) {
+				//currentTable.write();
+			}
+			else{
+				currentTable.write();
+			}
 		}
 		catch (IOException e){
 			//TODO:exception
@@ -244,7 +259,9 @@ public class myListener extends SQLBaseListener{
 		//System.out.println(attrValue);
 		try {
 			currentTable.delete(comparator, attrName, attrValue);
-			currentTable.write();
+			if(!manager.isTransaction(sessionId)) {
+				currentTable.write();
+			}
 		}
 		catch(IOException e)
 		{
@@ -270,7 +287,9 @@ public class myListener extends SQLBaseListener{
 		String attrValue = ctx.multiple_condition().condition().expression(1).getText();
 		try {
 			currentTable.update(attrToBeUpdated, valueTobeUpdated, comparator, attrName, attrValue);
-			currentTable.write();
+			if(!manager.isTransaction(sessionId)) {
+				currentTable.write();
+			}
 		}
 		catch(IOException e)
 		{
@@ -546,5 +565,4 @@ public class myListener extends SQLBaseListener{
 		catch (Exception e)
 		{}
 	}
-
 }
