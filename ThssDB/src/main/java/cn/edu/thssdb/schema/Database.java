@@ -8,6 +8,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Database {
@@ -66,6 +67,16 @@ public class Database {
 
   public void write() throws IOException {
     persist();
+    Iterator iterator = tables.entrySet().iterator();
+    while(iterator.hasNext()){
+      Map.Entry entry = (Map.Entry)iterator.next();
+      Table table = (Table)entry.getValue();
+      table.write();
+    }
+  }
+
+  public void rollback() throws IOException, ClassNotFoundException {
+    recover();
   }
 
 

@@ -82,7 +82,7 @@ public class Client {
 						break;
 				}
 				long endTime = System.currentTimeMillis();
-				println("It costs " + (endTime - startTime) + " ms.");
+				//println("It costs " + (endTime - startTime) + " ms.");
 			} while (open);
 			transport.close();
 		} catch (TTransportException e) {

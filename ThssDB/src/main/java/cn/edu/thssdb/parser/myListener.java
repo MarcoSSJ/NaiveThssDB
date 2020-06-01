@@ -7,6 +7,7 @@ import cn.edu.thssdb.type.ColumnType;
 import cn.edu.thssdb.utils.Global;
 import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,9 +49,18 @@ public class myListener extends SQLBaseListener{
 	}
 
 	@Override
-	public void exitShow_db_stmt(SQLParser.Show_db_stmtContext ctx){
-		//展示数据库，需要接口
+	public void exitRollback_stmt(SQLParser.Rollback_stmtContext ctx){
+		// TODO:rollback
+		Database database = manager.getDatabase(sessionId);
+		try {
+			database.rollback();
+		}
+		catch (IOException e){
+			//TODO:
+		}
+		catch (ClassNotFoundException e){
 
+		}
 	}
 
 	@Override
@@ -234,7 +244,7 @@ public class myListener extends SQLBaseListener{
 		}
 		try {
 			currentTable.insert(insertRow);
-			if(manager.isTransaction(sessionId)==true) {
+			if(manager.isTransaction(sessionId)) {
 				//currentTable.write();
 			}
 			else{
@@ -366,34 +376,34 @@ public class myListener extends SQLBaseListener{
 		}
 
 		//from部分
-		//TODO:如果没有join，则是单表查询，isSingleTable为true，表名放在sigleTableName内，其他为空
-		//TODO：有join（两个表），on条件分别是leftTableName.leftArrtName=rightTableName.rightTableAttrName
+		//TODO:如果没有join，则是单表查询，isSingleTable为true，single_table，其他为空
+		//TODO：有join（两个表），left_table.left_attribute=right_table.right_attribute
         /*
         table_query :
         table_name
         | table_name ( K_JOIN table_name )+ K_ON multiple_condition ;
         */
 		boolean isSingleTable = false; //单表查询
-		String sigleTableName = "";
-		String leftTableName = "";
-		String rightTableName = "";
-		String leftTableAttrName = "";
-		String rightTableAttrName = "";
+		String single_table = "";
+		String left_table = "";
+		String right_table = "";
+		String left_attribute = "";
+		String right_attribute = "";
 		String temp = "";
 		if(ctx.table_query(0).table_name().size()==1)
 		{
 			//table_name
 			isSingleTable = true;
-			sigleTableName = ctx.table_query(0).table_name(0).getText();
+			single_table = ctx.table_query(0).table_name(0).getText();
 		}
 		else
 		{
 			//拿到哪两个表做join
-			leftTableName = ctx.table_query(0).table_name(0).getText();
-			rightTableName = ctx.table_query(0).table_name(1).getText();
+			left_table = ctx.table_query(0).table_name(0).getText();
+			right_table = ctx.table_query(0).table_name(1).getText();
 
 			//解析on tableName1.attrName1 = tableName2.attrName2
-			leftTableAttrName = ctx.table_query(0)
+			left_attribute = ctx.table_query(0)
 					.multiple_condition()
 					.condition()
 					.expression(0)
@@ -401,7 +411,7 @@ public class myListener extends SQLBaseListener{
 					.column_full_name()
 					.column_name()
 					.getText();
-			rightTableAttrName = ctx.table_query(0)
+			right_attribute = ctx.table_query(0)
 					.multiple_condition()
 					.condition()
 					.expression(1)
@@ -418,15 +428,15 @@ public class myListener extends SQLBaseListener{
 					.table_name()
 					.getText();
 			//如果顺序是反的，反过来，保证left对应left，right对应right
-			if(!leftTableName.equals(temp))
+			if(!left_table.equals(temp))
 			{
-				temp = leftTableName;
-				leftTableName = rightTableName;
-				rightTableName = temp;
+				temp = left_table;
+				left_table = right_table;
+				right_table = temp;
 			}
 		}
 
-		//TODO:只做只有一个where条件的情况，whereAttrName whereComparator whereAttrValue
+		//TODO:只做只有一个where条件的情况，where_attribute comparator where_valve
 		//where attrName = attrValue
         /*
         multiple_condition :
@@ -434,24 +444,24 @@ public class myListener extends SQLBaseListener{
         | multiple_condition AND multiple_condition
         | multiple_condition OR multiple_condition ;
         */
-		String whereAttrName = null;
-		String whereComparator = null;
-		String whereAttrValue = null;
+		String where_attribute = null;
+		String comparator = null;
+		String where_valve = null;
 		boolean hasWhere = true;
 		if(ctx.multiple_condition()!=null)
 		{
-			whereAttrName = ctx.multiple_condition()
+			where_attribute = ctx.multiple_condition()
 					.condition()
 					.expression(0)
 					.comparer()
 					.column_full_name()
 					.column_name()
 					.getText();
-			whereComparator = ctx.multiple_condition()
+			comparator = ctx.multiple_condition()
 					.condition()
 					.comparator()
 					.getText();
-			whereAttrValue = ctx.multiple_condition()
+			where_valve = ctx.multiple_condition()
 					.condition()
 					.expression(1)
 					.comparer()
@@ -465,7 +475,7 @@ public class myListener extends SQLBaseListener{
 
 		if(isSingleTable)
 		{
-			Table table = database.getTable(sigleTableName);
+			Table table = database.getTable(single_table);
 			//TODO:单表查询
 			if(selectAll)
 			{
@@ -473,29 +483,28 @@ public class myListener extends SQLBaseListener{
 				{
 					resp.columnsList.add(table.columns.get(i).getName());
 				}
-				if(hasWhere == false)
+				if(!hasWhere)
 				{
 					resultRows = table.select();
 				}
 				else
 				{
-					resultRows = table.select(whereComparator, whereAttrName, whereAttrValue);
+					resultRows = table.select(comparator, where_attribute, where_valve);
 				}
 			}
 			else
 			{
-				for(int i = 0; i < resultColumns.size(); i++)
-				{
-					resultIndex.add(table.getIndex(resultColumns.get(i)));
+				for (String resultColumn : resultColumns) {
+					resultIndex.add(table.getIndex(resultColumn));
 				}
 				resp.columnsList.addAll(resultColumns);
-				if(hasWhere == false)
+				if(!hasWhere)
 				{
 					resultRows = table.select();
 				}
 				else
 				{
-					resultRows = table.select(whereComparator, whereAttrName, whereAttrValue);
+					resultRows = table.select(comparator, where_attribute, where_valve);
 				}
 			}
 
@@ -503,17 +512,17 @@ public class myListener extends SQLBaseListener{
 		else
 		{
 			try {
-				Table leftTable = database.getTable(leftTableName);
-				Table rightTable = database.getTable(rightTableName);
-				QueryResult queryResult = new QueryResult(leftTable, rightTable, leftTableAttrName, rightTableAttrName);
+				Table leftTable = database.getTable(left_table);
+				Table rightTable = database.getTable(right_table);
+				QueryResult queryResult = new QueryResult(leftTable, rightTable, left_attribute, right_attribute);
 				//TODO：多表查询
 				if (selectAll) {
 					resultRows = queryResult.newTable.select();
 				} else {
-					if (hasWhere == false) {
+					if (!hasWhere) {
 						resultRows = queryResult.newTable.select();
 					} else {
-						resultRows = queryResult.newTable.select(whereComparator, whereAttrName, whereAttrValue);
+						resultRows = queryResult.newTable.select(comparator, where_attribute, where_valve);
 					}
 				}
 			}
@@ -525,16 +534,16 @@ public class myListener extends SQLBaseListener{
 		}
 		//System.out.println(resultRows.toString());
 		if(selectAll) {
-			for (int i = 0; i < resultRows.size(); i++) {
-				resp.rowList.add(Arrays.asList(resultRows.get(i).split(",")));
+			for (String resultRow : resultRows) {
+				resp.rowList.add(Arrays.asList(resultRow.split(",")));
 			}
 		}
 		else{
-			for (int i = 0; i < resultRows.size(); i++) {
+			for (String resultRow : resultRows) {
 				ArrayList<String> row = new ArrayList<>();
-				List<String> oldRow = Arrays.asList(resultRows.get(i).split(","));
-				for(int j = 0; j < resultIndex.size(); j++){
-					row.add(oldRow.get(resultIndex.get(j)));
+				List<String> oldRow = Arrays.asList(resultRow.split(","));
+				for (Integer index : resultIndex) {
+					row.add(oldRow.get(index));
 				}
 				resp.rowList.add(row);
 			}

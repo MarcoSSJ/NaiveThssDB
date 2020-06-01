@@ -27,7 +27,11 @@ sql_stmt :
     | quit_stmt
     | update_stmt
     | commit_stmt
-    | transaction_stmt;
+    | transaction_stmt
+    | rollback_stmt;
+
+rollback_stmt:
+    K_ROLLBACK ;
 
 transaction_stmt :
     K_BEGIN K_TRANSACTION ;
@@ -237,6 +241,7 @@ K_WHERE : W H E R E;
 K_COMMIT : C O M M I T;
 K_BEGIN : B E G I N;
 K_TRANSACTION : T R A N S A C T I O N;
+K_ROLLBACK : R O L L B A C K;
 
 IDENTIFIER :
     [a-zA-Z_] [a-zA-Z_0-9]* ;
