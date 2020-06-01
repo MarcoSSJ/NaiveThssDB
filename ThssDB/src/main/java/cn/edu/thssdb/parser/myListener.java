@@ -115,59 +115,50 @@ public class myListener extends SQLBaseListener{
 	public void exitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx){
 		try {
 			String tableName = ctx.table_name().getText();
-			List<SQLParser.Column_defContext> columnDefCtxs = ctx.column_def();
-			int numOfColumns = columnDefCtxs.size();
-			Column[] columns = new Column[numOfColumns];
-			String primary = "";
-			//先处理主键问题
-			List<SQLParser.Column_nameContext> table_constraintContexts = ctx.table_constraint().column_name();
-			if(!table_constraintContexts.isEmpty())
+			List<SQLParser.Column_defContext> column_defContexts = ctx.column_def();
+			int columnNum = column_defContexts.size();
+			Column[] columns = new Column[columnNum];
+			//先处理主键问题，仅支持后置单主键
+			List<SQLParser.Column_nameContext> column_nameContexts = ctx.table_constraint().column_name();
+			String primary_column = "";
+			if(!column_nameContexts.isEmpty())
+				primary_column = column_nameContexts.get(0).getText();
+
+			for(int i=0;i<columnNum;i++)
 			{
-				List<SQLParser.Column_nameContext> column_nameContexts = ctx.table_constraint().column_name();
-				primary = column_nameContexts.get(0).getText();
-			}
-			for(int i=0;i<numOfColumns;i++)
-			{
-				SQLParser.Column_defContext column_defContext = columnDefCtxs.get(i);
-				String columnName = column_defContext.column_name().getText();
-				String typeRaw = column_defContext.type_name().getText();
+				SQLParser.Column_defContext column_defContext = column_defContexts.get(i);
+				String column = column_defContext.column_name().getText();
+				String type = column_defContext.type_name().getText();
 				//预处理type
-				typeRaw = typeRaw.toUpperCase();
-				typeRaw.replaceAll(" ","");
-				StringBuilder typeLength = new StringBuilder("32");
-				if(typeRaw.charAt(0)=='S')
+				type = type.toUpperCase();
+				type = type.replaceAll(" ","");
+				String size_str;
+				if(type.length()>6 && type.contains("STRING"))//STRING类型
 				{
-					typeLength = new StringBuilder();
-					//识别预设字符串长度
-					for(int j=7;j<typeRaw.length()-1;j++)
-					{
-						typeLength.append(typeRaw.charAt(j));
-					}
-					typeRaw = "STRING";
+					size_str = type.substring(7,type.length()-1);
+					type = "STRING";
 				}
-				int maxLength = Integer.parseInt(typeLength.toString());
-				ColumnType columnType = ColumnType.valueOf(typeRaw);
+				else
+					size_str = "32";
+				int size = Integer.parseInt(size_str);
+				ColumnType columnType = ColumnType.valueOf(type);
+
+				//仅支持NOTNULL一种限制
 				boolean notNull = false;
 				List<SQLParser.Column_constraintContext> column_constraintContexts = column_defContext.column_constraint();
 				if(!column_constraintContexts.isEmpty())
-				{
-					String columnConstraint = column_constraintContexts.get(0).getText();
-					if (columnConstraint.toUpperCase().equals("NOTNULL"))
-					{
-						notNull = true;
-					}
-				}
-				if(columnName.equals(primary))
-					columns[i] = new Column(columnName,columnType,1, notNull, maxLength);
+					notNull = true;
+
+				if(column.equals(primary_column))
+					columns[i] = new Column(column,columnType,1, notNull, size);
 				else
-					columns[i] = new Column(columnName,columnType,0, notNull, maxLength);
+					columns[i] = new Column(column,columnType,0, notNull, size);
 			}
 			Database database = manager.getDatabase(sessionId);
 			database.create(tableName, columns);
 			if(!manager.isTransaction(sessionId)) {
 				database.write();
 			}
-			//manager.database.create(tableName, columns);
 		}
 		catch (Exception e)
 		{
@@ -183,11 +174,9 @@ public class myListener extends SQLBaseListener{
     */
 	@Override
 	public void exitInsert_stmt(SQLParser.Insert_stmtContext ctx) {
-		//TODO:检测主键为空和重复主键的问题
 
-		String tableName = ctx.table_name().getText();
 		Database database = manager.getDatabase(sessionId);
-
+		Table table = database.getTable(ctx.table_name().getText());
 
 		/*
 		value_entry :
@@ -195,15 +184,17 @@ public class myListener extends SQLBaseListener{
     	*/
 		//简单版本只取第一个value_entry
 		String origin_value = ctx.value_entry(0).getText().trim();//去空格
-		StringBuilder literal_value = new StringBuilder();
-		for(int i=1;i<origin_value.length()-1;i++)//去括号
-			literal_value.append(origin_value.charAt(i));
+		System.out.println(origin_value);
+		//不知道这里为什么拿literal value拿到的是一串数字？？？
+//		List<SQLParser.Literal_valueContext> literal_valueContexts = ctx.value_entry(0).literal_value();
+//		System.out.println(literal_valueContexts.toString());
+//		for(int i=0;i<literal_valueContexts.size();i++)//去括号
+//			System.out.println(literal_valueContexts.get(i).toString());
+		String literal_value;
+		literal_value = origin_value.substring(1,origin_value.length()-1);
+		String[] entry_value = literal_value.split(",");//这里拿到每个属性值
 
-		String[] entry_value = literal_value.toString().split(",");//这里拿到每个属性值
 		int entry_num = entry_value.length;
-
-		Table currentTable = database.getTable(tableName);
-
 		Entry[] entry = new Entry[entry_num];
 		for(int i=0;i<entry_num;i++)
 			entry[i] = new Entry(entry_value[i]);
@@ -214,42 +205,38 @@ public class myListener extends SQLBaseListener{
 		//看是否是默认插入，INSERT INTO person VALUES (‘Bob’, 15)或INSERT INTO person(name) VALUES (‘Bob’)
 		int column_num = column_names.size();
 		if(column_num == 0)
-		{
 			// 默认输入，类似INSERT INTO person VALUES (‘Bob’, 15)，entries不调整
 			insertRow = new Row(entry);
-		}
 		else
 		{
 			//类似INSERT INTO person(name) VALUES (‘Bob’)
-			String[] column_name = new String[column_num];
-			for(int i=0;i<column_num;i++)//拿到列名
-				column_name[i] = column_names.get(i).getText();
 
-			int table_column_num = currentTable.columns.size();
+			//拿到原有表中列的信息
+			int table_column_num = table.columns.size();
 			Entry[] table_entry = new Entry[table_column_num];
 			for(int i=0;i<table_column_num;i++)
 				table_entry[i] = new Entry(null);
 
+			//拿到要插入的列的信息
+			String[] column_name = new String[column_num];
 			for(int i=0;i<column_num;i++)
+				column_name[i] = column_names.get(i).getText();
+
+			//找插入的是哪一个属性
+			for(int i = 0;i<column_num;i++)
 			{
-				//check every column
-				int index;
-				//这里在找插入的是哪一个属性
-				for(index = 0; index < table_column_num; index++)
-					if(currentTable.columns.get(index).name.equals(column_name[i]))
+				int j;
+				for(j = 0; j < table_column_num; j++)
+					if(table.columns.get(j).name.equals(column_name[i]))
 						break;
-				table_entry[index] = new Entry(entry[i]);
+				table_entry[j] = new Entry(entry[i]);
 			}
 			insertRow = new Row(table_entry);
 		}
 		try {
-			currentTable.insert(insertRow);
-			if(manager.isTransaction(sessionId)) {
-				//currentTable.write();
-			}
-			else{
-				currentTable.write();
-			}
+			table.insert(insertRow);
+			if(!manager.isTransaction(sessionId))
+				table.write();
 		}
 		catch (IOException e){
 			//TODO:exception
@@ -258,19 +245,15 @@ public class myListener extends SQLBaseListener{
 
 	@Override
 	public void exitDelete_stmt(SQLParser.Delete_stmtContext ctx) {
-		String tableName = ctx.table_name().getText();
 		Database database = manager.getDatabase(sessionId);
-		Table currentTable = database.getTable(tableName);
+		Table table = database.getTable(ctx.table_name().getText());
 		String comparator = ctx.multiple_condition().condition().comparator().getText();
-		//System.out.println(comparator);
 		String attrName = ctx.multiple_condition().condition().expression(0).getText();
 		String attrValue = ctx.multiple_condition().condition().expression(1).getText();
-		//System.out.println(attrName);
-		//System.out.println(attrValue);
 		try {
-			currentTable.delete(comparator, attrName, attrValue);
+			table.delete(comparator, attrName, attrValue);
 			if(!manager.isTransaction(sessionId)) {
-				currentTable.write();
+				table.write();
 			}
 		}
 		catch(IOException e)
@@ -281,24 +264,17 @@ public class myListener extends SQLBaseListener{
 
 	@Override
 	public void exitUpdate_stmt(SQLParser.Update_stmtContext ctx) {
-		// 更新哪个表
-		String tableName = ctx.table_name().getText();
 		Database database = manager.getDatabase(sessionId);
-		System.out.println(tableName);
-		// 更新哪一列
-		String attrToBeUpdated = ctx.column_name().getText();
-		System.out.println(attrToBeUpdated);
-		// 更新为何值
-		String valueTobeUpdated = ctx.expression().getText();
-		System.out.println(valueTobeUpdated);
-		Table currentTable = database.getTable(tableName);
+		String attribute1 = ctx.column_name().getText();
+		String value1 = ctx.expression().getText();
+		Table table = database.getTable(ctx.table_name().getText());
 		String comparator = ctx.multiple_condition().condition().comparator().getText();
-		String attrName = ctx.multiple_condition().condition().expression(0).getText();
-		String attrValue = ctx.multiple_condition().condition().expression(1).getText();
+		String attribute2 = ctx.multiple_condition().condition().expression(0).getText();
+		String value2 = ctx.multiple_condition().condition().expression(1).getText();
 		try {
-			currentTable.update(attrToBeUpdated, valueTobeUpdated, comparator, attrName, attrValue);
+			table.update(attribute1, value1, comparator, attribute2, value2);
 			if(!manager.isTransaction(sessionId)) {
-				currentTable.write();
+				table.write();
 			}
 		}
 		catch(IOException e)
@@ -324,10 +300,10 @@ public class myListener extends SQLBaseListener{
 		ArrayList<String> resultRows = new ArrayList<>(); //查询结果
 
 		//select部分
-		//TODO:select *,设置selectAll = true
-		//TODO:select table_name.*...，table名放在resultTables里面,resultColumns里面放一个*
-		//TODO:select column_name,resultTables里面放*，column名放在resultColumns里面
-		//TODO:select table_name.column_name...，table名放在resultTables里面，column名放在resultColumns里面
+		//select *,设置selectAll = true
+		//select table_name.*...，table名放在resultTables里面,resultColumns里面放一个*
+		//select column_name,resultTables里面放*，column名放在resultColumns里面
+		//select table_name.column_name...，table名放在resultTables里面，column名放在resultColumns里面
         /*
         result_column
         : '*'
@@ -336,10 +312,8 @@ public class myListener extends SQLBaseListener{
         */
 		boolean selectAll = false;
 		if(result_columnContexts.get(0).getText().equals("*"))
-		{
 			//select *
 			selectAll = true;
-		}
 		else
 		{
 			for(SQLParser.Result_columnContext result_columnContext : result_columnContexts)
@@ -370,14 +344,13 @@ public class myListener extends SQLBaseListener{
 						resultTables.add(result_columnContext.column_full_name().table_name().getText());
 						resultColumns.add(result_columnContext.column_full_name().column_name().getText());
 					}
-					//System.out.println(result_columnContexts.get(i).column_full_name().column_name().getText());
 				}
 			}
 		}
 
 		//from部分
-		//TODO:如果没有join，则是单表查询，isSingleTable为true，single_table，其他为空
-		//TODO：有join（两个表），left_table.left_attribute=right_table.right_attribute
+		//如果没有join，则是单表查询，isSingleTable为true，single_table，其他为空
+		//有join（两个表），left_table.left_attribute=right_table.right_attribute
         /*
         table_query :
         table_name
@@ -403,30 +376,12 @@ public class myListener extends SQLBaseListener{
 			right_table = ctx.table_query(0).table_name(1).getText();
 
 			//解析on tableName1.attrName1 = tableName2.attrName2
-			left_attribute = ctx.table_query(0)
-					.multiple_condition()
-					.condition()
-					.expression(0)
-					.comparer()
-					.column_full_name()
-					.column_name()
-					.getText();
-			right_attribute = ctx.table_query(0)
-					.multiple_condition()
-					.condition()
-					.expression(1)
-					.comparer()
-					.column_full_name()
-					.column_name()
-					.getText();
-			temp = ctx.table_query(0)
-					.multiple_condition()
-					.condition()
-					.expression(0)
-					.comparer()
-					.column_full_name()
-					.table_name()
-					.getText();
+			left_attribute = ctx.table_query(0).multiple_condition().condition().expression(0).comparer()
+					.column_full_name().column_name().getText();
+			right_attribute = ctx.table_query(0).multiple_condition().condition().expression(1).comparer()
+					.column_full_name().column_name().getText();
+			temp = ctx.table_query(0).multiple_condition().condition().expression(0).comparer().column_full_name()
+					.table_name().getText();
 			//如果顺序是反的，反过来，保证left对应left，right对应right
 			if(!left_table.equals(temp))
 			{
@@ -436,7 +391,7 @@ public class myListener extends SQLBaseListener{
 			}
 		}
 
-		//TODO:只做只有一个where条件的情况，where_attribute comparator where_valve
+		//只做只有一个where条件的情况，where_attribute comparator where_valve
 		//where attrName = attrValue
         /*
         multiple_condition :
@@ -450,64 +405,37 @@ public class myListener extends SQLBaseListener{
 		boolean hasWhere = true;
 		if(ctx.multiple_condition()!=null)
 		{
-			where_attribute = ctx.multiple_condition()
-					.condition()
-					.expression(0)
-					.comparer()
-					.column_full_name()
-					.column_name()
-					.getText();
-			comparator = ctx.multiple_condition()
-					.condition()
-					.comparator()
-					.getText();
-			where_valve = ctx.multiple_condition()
-					.condition()
-					.expression(1)
-					.comparer()
-					.literal_value()
-					.getText();
+			where_attribute = ctx.multiple_condition().condition().expression(0).comparer().column_full_name()
+					.column_name().getText();
+			comparator = ctx.multiple_condition().condition().comparator().getText();
+			where_valve = ctx.multiple_condition().condition().expression(1).comparer().literal_value().getText();
 		}
 		else
-		{
 			hasWhere = false;
-		}
 
 		if(isSingleTable)
 		{
 			Table table = database.getTable(single_table);
-			//TODO:单表查询
+			//单表查询
 			if(selectAll)
 			{
 				for(int i = 0; i < table.columns.size(); i++)
-				{
 					resp.columnsList.add(table.columns.get(i).getName());
-				}
 				if(!hasWhere)
-				{
 					resultRows = table.select();
-				}
 				else
-				{
 					resultRows = table.select(comparator, where_attribute, where_valve);
-				}
 			}
 			else
 			{
-				for (String resultColumn : resultColumns) {
+				for (String resultColumn : resultColumns)
 					resultIndex.add(table.getIndex(resultColumn));
-				}
 				resp.columnsList.addAll(resultColumns);
 				if(!hasWhere)
-				{
 					resultRows = table.select();
-				}
 				else
-				{
 					resultRows = table.select(comparator, where_attribute, where_valve);
-				}
 			}
-
 		}
 		else
 		{
@@ -515,41 +443,34 @@ public class myListener extends SQLBaseListener{
 				Table leftTable = database.getTable(left_table);
 				Table rightTable = database.getTable(right_table);
 				QueryResult queryResult = new QueryResult(leftTable, rightTable, left_attribute, right_attribute);
-				//TODO：多表查询
-				if (selectAll) {
+				//多表查询
+				if (selectAll)
 					resultRows = queryResult.newTable.select();
-				} else {
-					if (!hasWhere) {
+				else
+					if (!hasWhere)
 						resultRows = queryResult.newTable.select();
-					} else {
+					else
 						resultRows = queryResult.newTable.select(comparator, where_attribute, where_valve);
-					}
-				}
 			}
 			catch (Exception e)
 			{
 				//TODO: exception
-
 			}
 		}
 		//System.out.println(resultRows.toString());
 		if(selectAll) {
-			for (String resultRow : resultRows) {
+			for (String resultRow : resultRows)
 				resp.rowList.add(Arrays.asList(resultRow.split(",")));
-			}
 		}
 		else{
 			for (String resultRow : resultRows) {
 				ArrayList<String> row = new ArrayList<>();
 				List<String> oldRow = Arrays.asList(resultRow.split(","));
-				for (Integer index : resultIndex) {
+				for (Integer index : resultIndex)
 					row.add(oldRow.get(index));
-				}
 				resp.rowList.add(row);
 			}
 		}
-		//resp.rowList.add(resultRows);
-		//System.out.println(resp.rowList.toString());
 	}
 
 	public ExecuteStatementResp getResult(){
@@ -557,9 +478,8 @@ public class myListener extends SQLBaseListener{
 			status.setCode(Global.SUCCESS_CODE);
 			resp.hasResult = true;
 		}
-		else{
+		else
 			status.setCode(Global.FAILURE_CODE);
-		}
 		resp.setStatus(status);
 		return resp;
 	}

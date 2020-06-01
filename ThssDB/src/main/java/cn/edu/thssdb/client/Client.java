@@ -46,6 +46,7 @@ public class Client {
 	private static CommandLine commandLine;
 
 	public static void main(String[] args) {
+		sessionId = -1;
 		commandLine = parseCmd(args);
 		if (commandLine.hasOption(HELP_ARGS)) {
 			showHelp();
@@ -96,7 +97,7 @@ public class Client {
 			return;
 		}
 		try {
-			ConnectReq req = new ConnectReq(Global.USERNAME, Global.PASSWORD);
+			ConnectReq req = new ConnectReq("SA", "");
 			ConnectResp resp = client.connect(req);
 			System.out.println(resp);
 

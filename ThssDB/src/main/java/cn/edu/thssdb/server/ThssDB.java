@@ -58,8 +58,9 @@ public class ThssDB {
 		}
 	}
 
-	public long setSession() {
-		long sessionId = sessionNum++;
+	public long addSession() {
+		sessionNum++;
+		long sessionId = sessionNum;
 		sessionList.add(sessionId);
 		return sessionId;
 	}
@@ -72,11 +73,6 @@ public class ThssDB {
 		return sessionList.contains(sessionId);
 	}
 
-	//TODO:查询接口
-//  public SQLExecuteResult execute(String sql) {
-//    List<SQLExecuteResult> resultList = manager.execute(sql);
-//    return resultList.get(0);
-//  }
 
 	private static class ThssDBHolder {
 		private static final ThssDB INSTANCE = new ThssDB();
