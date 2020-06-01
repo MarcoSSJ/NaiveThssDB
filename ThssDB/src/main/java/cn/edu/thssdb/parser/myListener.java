@@ -1,8 +1,11 @@
 package cn.edu.thssdb.parser;
-
+import cn.edu.thssdb.rpc.thrift.Status;
 import cn.edu.thssdb.query.QueryResult;
+import cn.edu.thssdb.rpc.thrift.ExecuteStatementResp;
 import cn.edu.thssdb.schema.*;
 import cn.edu.thssdb.type.ColumnType;
+import cn.edu.thssdb.utils.Global;
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -12,11 +15,20 @@ import java.util.List;
 
 public class myListener extends SQLBaseListener{
 	private Manager manager;
+	//private Database database;
+	long sessionId;
+	private ExecuteStatementResp resp = new ExecuteStatementResp();
+	private Status status = new Status();
+	private boolean success = true;
+
+	public void setSessionId(long sessionId){
+		this.sessionId = sessionId;
+	}
 
 	@Override
 	public void enterParse(SQLParser.ParseContext ctx){
 		//进入数据库操作，对应g4文件3-4行parse
-		manager = new Manager();
+		manager = Manager.getInstance();
 	}
 
 	@Override
@@ -32,6 +44,7 @@ public class myListener extends SQLBaseListener{
 	@Override
 	public void exitShow_db_stmt(SQLParser.Show_db_stmtContext ctx){
 		//展示数据库，需要接口
+
 	}
 
 	@Override
@@ -58,17 +71,26 @@ public class myListener extends SQLBaseListener{
 
 	@Override
 	public void exitUse_db_stmt(SQLParser.Use_db_stmtContext ctx) {
+
 		String dbName = ctx.database_name().getText();
+		System.out.println(sessionId+" use "+dbName);
 		//改变数据库
-		manager.use(dbName);
-		//switchDatabase里面是空的……
+		manager.use(sessionId, dbName);
 	}
 
 	@Override
 	public void exitDrop_table_stmt(SQLParser.Drop_table_stmtContext ctx) {
 		String tableName = ctx.table_name().getText();
 		//删除整个表
-		manager.database.drop(tableName);
+		Database database = manager.getDatabase(sessionId);
+		try {
+			database.drop(tableName);
+			database.write();
+		}
+		catch (IOException e) {
+			//TODO:删除失败
+		}
+
 	}
 
 	@Override
@@ -122,10 +144,15 @@ public class myListener extends SQLBaseListener{
 				else
 					columns[i] = new Column(columnName,columnType,0, notNull, maxLength);
 			}
-			manager.database.create(tableName, columns);
+			Database db = manager.getDatabase(sessionId);
+			db.create(tableName, columns);
+			db.write();
+			//manager.database.create(tableName, columns);
 		}
 		catch (Exception e)
-		{}
+		{
+
+		}
 	}
 
 
@@ -139,6 +166,7 @@ public class myListener extends SQLBaseListener{
 		//TODO:检测主键为空和重复主键的问题
 
 		String tableName = ctx.table_name().getText();
+		Database database = manager.getDatabase(sessionId);
 
 
 		/*
@@ -153,7 +181,8 @@ public class myListener extends SQLBaseListener{
 
 		String[] entry_value = literal_value.toString().split(",");//这里拿到每个属性值
 		int entry_num = entry_value.length;
-		Table currentTable = manager.database.getTable(tableName);
+
+		Table currentTable = database.getTable(tableName);
 
 		Entry[] entry = new Entry[entry_num];
 		for(int i=0;i<entry_num;i++)
@@ -193,26 +222,41 @@ public class myListener extends SQLBaseListener{
 			}
 			insertRow = new Row(table_entry);
 		}
-		currentTable.insert(insertRow);
+		try {
+			currentTable.insert(insertRow);
+			currentTable.write();
+		}
+		catch (IOException e){
+			//TODO:exception
+		}
 	}
 
 	@Override
 	public void exitDelete_stmt(SQLParser.Delete_stmtContext ctx) {
 		String tableName = ctx.table_name().getText();
-		Table currentTable = manager.database.getTable(tableName);
+		Database database = manager.getDatabase(sessionId);
+		Table currentTable = database.getTable(tableName);
 		String comparator = ctx.multiple_condition().condition().comparator().getText();
-		System.out.println(comparator);
+		//System.out.println(comparator);
 		String attrName = ctx.multiple_condition().condition().expression(0).getText();
 		String attrValue = ctx.multiple_condition().condition().expression(1).getText();
-		System.out.println(attrName);
-		System.out.println(attrValue);
-		currentTable.delete(comparator, attrName, attrValue);
+		//System.out.println(attrName);
+		//System.out.println(attrValue);
+		try {
+			currentTable.delete(comparator, attrName, attrValue);
+			currentTable.write();
+		}
+		catch(IOException e)
+		{
+			//TODO: exception
+		}
 	}
 
 	@Override
 	public void exitUpdate_stmt(SQLParser.Update_stmtContext ctx) {
 		// 更新哪个表
 		String tableName = ctx.table_name().getText();
+		Database database = manager.getDatabase(sessionId);
 		System.out.println(tableName);
 		// 更新哪一列
 		String attrToBeUpdated = ctx.column_name().getText();
@@ -220,11 +264,18 @@ public class myListener extends SQLBaseListener{
 		// 更新为何值
 		String valueTobeUpdated = ctx.expression().getText();
 		System.out.println(valueTobeUpdated);
-		Table currentTable = manager.database.getTable(tableName);
+		Table currentTable = database.getTable(tableName);
 		String comparator = ctx.multiple_condition().condition().comparator().getText();
 		String attrName = ctx.multiple_condition().condition().expression(0).getText();
 		String attrValue = ctx.multiple_condition().condition().expression(1).getText();
-		currentTable.update(attrToBeUpdated, valueTobeUpdated, comparator, attrName, attrValue);
+		try {
+			currentTable.update(attrToBeUpdated, valueTobeUpdated, comparator, attrName, attrValue);
+			currentTable.write();
+		}
+		catch(IOException e)
+		{
+
+		}
 	}
 
 	@Override
@@ -234,10 +285,14 @@ public class myListener extends SQLBaseListener{
         K_SELECT ( K_DISTINCT | K_ALL )? result_column ( ',' result_column )*
         K_FROM table_query ( ',' table_query )* ( K_WHERE multiple_condition )? ;
         */
+		Database database = manager.getDatabase(sessionId);
+		resp.rowList = new ArrayList<>();
+		resp.columnsList = new ArrayList<>();
 		ArrayList<String> resultTables = new ArrayList<>();//列来自什么表 tablename
 		ArrayList<String> resultColumns = new ArrayList<>();//查询哪些列 columnname
+		ArrayList<Integer> resultIndex = new ArrayList<>();
 		List<SQLParser.Result_columnContext> result_columnContexts = ctx.result_column();
-		ArrayList<Row> resultRows = new ArrayList<>(); //查询结果
+		ArrayList<String> resultRows = new ArrayList<>(); //查询结果
 
 		//select部分
 		//TODO:select *,设置selectAll = true
@@ -391,14 +446,30 @@ public class myListener extends SQLBaseListener{
 
 		if(isSingleTable)
 		{
-			Table table = manager.database.getTable(sigleTableName);
+			Table table = database.getTable(sigleTableName);
 			//TODO:单表查询
 			if(selectAll)
 			{
-				resultRows = table.select();
+				for(int i = 0; i < table.columns.size(); i++)
+				{
+					resp.columnsList.add(table.columns.get(i).getName());
+				}
+				if(hasWhere == false)
+				{
+					resultRows = table.select();
+				}
+				else
+				{
+					resultRows = table.select(whereComparator, whereAttrName, whereAttrValue);
+				}
 			}
 			else
 			{
+				for(int i = 0; i < resultColumns.size(); i++)
+				{
+					resultIndex.add(table.getIndex(resultColumns.get(i)));
+				}
+				resp.columnsList.addAll(resultColumns);
 				if(hasWhere == false)
 				{
 					resultRows = table.select();
@@ -413,8 +484,8 @@ public class myListener extends SQLBaseListener{
 		else
 		{
 			try {
-				Table leftTable = manager.database.getTable(leftTableName);
-				Table rightTable = manager.database.getTable(rightTableName);
+				Table leftTable = database.getTable(leftTableName);
+				Table rightTable = database.getTable(rightTableName);
 				QueryResult queryResult = new QueryResult(leftTable, rightTable, leftTableAttrName, rightTableAttrName);
 				//TODO：多表查询
 				if (selectAll) {
@@ -433,15 +504,47 @@ public class myListener extends SQLBaseListener{
 
 			}
 		}
+		//System.out.println(resultRows.toString());
+		if(selectAll) {
+			for (int i = 0; i < resultRows.size(); i++) {
+				resp.rowList.add(Arrays.asList(resultRows.get(i).split(",")));
+			}
+		}
+		else{
+			for (int i = 0; i < resultRows.size(); i++) {
+				ArrayList<String> row = new ArrayList<>();
+				List<String> oldRow = Arrays.asList(resultRows.get(i).split(","));
+				for(int j = 0; j < resultIndex.size(); j++){
+					row.add(oldRow.get(resultIndex.get(j)));
+				}
+				resp.rowList.add(row);
+			}
+		}
+		//resp.rowList.add(resultRows);
+		//System.out.println(resp.rowList.toString());
+	}
+
+	public ExecuteStatementResp getResult(){
+		if(success){
+			status.setCode(Global.SUCCESS_CODE);
+			resp.hasResult = true;
+		}
+		else{
+			status.setCode(Global.FAILURE_CODE);
+		}
+		resp.setStatus(status);
+		return resp;
 	}
 
 	@Override
 	public void exitParse(SQLParser.ParseContext ctx){
 		//退出数据库操作，进行持久化等操作，需要接口
+		Database database = manager.getDatabase(sessionId);
 		try {
-			manager.database.quit();
+			database.quit();
 		}
 		catch (Exception e)
 		{}
 	}
+
 }

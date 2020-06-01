@@ -10,7 +10,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Manager {
   private HashMap<String, Database> databases;
-  public Database database;
+  //public Database database;
+  private HashMap<Long, String> users;
   private static ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   public static Manager getInstance() {
@@ -26,6 +27,8 @@ public class Manager {
   public Manager() {
     // TODO
     databases = new HashMap<String, Database>();
+    users = new HashMap<Long, String>();
+    recover();
   }
 
   private void persist() throws IOException
@@ -60,8 +63,10 @@ public class Manager {
       in.close();
       for(String name:dbList)
       {
-        databases.put(name, null);
+        Database database = new Database(name);
+        databases.put(name, database);
       }
+      System.out.println(databases.toString());
     }catch (FileNotFoundException e){
       //
     } catch (IOException e) {
@@ -71,17 +76,17 @@ public class Manager {
     }
   }
 
-  public void use(String name)
+  public void use(long sessionID, String name)
   {
-    try{
-      if(databases.get(name)==null){
-        Database db = new Database(name);
-        databases.put(name, db);
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
-    } catch (ClassNotFoundException e) {
-      e.printStackTrace();
+    System.out.println("use"+name);
+    if(databases.get(name)!=null){
+      //Database db = new Database(name);
+      //databases.put(name, db);
+      users.put(sessionID, name);
+    }
+    else{
+      //TODO: database not found exception
+
     }
   }
 
@@ -95,6 +100,7 @@ public class Manager {
     }else{
       db.mkdir();
     }
+    persist();
   }
 
   public void deleteDatabase(String name) throws IOException{
@@ -106,10 +112,16 @@ public class Manager {
     }else{
       //exception
     }
+    persist();
   }
 
   public void switchDatabase(String name) {
     // TODO
+  }
+
+  public Database getDatabase(Long sessionID){
+    String name = users.get(sessionID);
+    return databases.get(name);
   }
 
   private static class ManagerHolder {

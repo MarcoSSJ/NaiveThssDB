@@ -1,6 +1,7 @@
 package cn.edu.thssdb.client;
 
 import cn.edu.thssdb.rpc.thrift.*;
+import cn.edu.thssdb.service.IServiceHandler;
 import cn.edu.thssdb.utils.Global;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -17,6 +18,7 @@ import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.swing.text.html.HTMLDocument;
 import java.io.PrintStream;
 import java.util.Scanner;
 
@@ -96,6 +98,7 @@ public class Client {
 		try {
 			ConnectReq req = new ConnectReq(Global.USERNAME, Global.PASSWORD);
 			ConnectResp resp = client.connect(req);
+			System.out.println(resp);
 
 			if (resp.getStatus().getCode() == Global.SUCCESS_CODE) {
 				sessionId = resp.getSessionId();
@@ -141,6 +144,13 @@ public class Client {
 			ExecuteStatementResp resp = client.executeStatement(req);
 			if (resp.hasResult) {
 				//TODO: 这里调用函数执行语句，并输出结果
+				if(resp.rowList!=null){
+					System.out.println(resp.columnsList);
+					for(int i = 0; i < resp.rowList.size(); i++)
+					{
+						System.out.println(resp.rowList.get(i));
+					}
+				}
 			}
 			else
 				//TODO:输出错误信息

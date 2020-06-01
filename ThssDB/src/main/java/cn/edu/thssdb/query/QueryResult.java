@@ -1,6 +1,7 @@
 package cn.edu.thssdb.query;
 
 import cn.edu.thssdb.schema.Column;
+import cn.edu.thssdb.schema.Entry;
 import cn.edu.thssdb.schema.Row;
 
 import java.io.IOException;
@@ -20,6 +21,35 @@ public class QueryResult {
   public Table newTable;
 
 
+  public QueryResult(Table table, ArrayList<String> attrName) throws IOException, ClassNotFoundException {
+    int columnSize = attrName.size();
+    this.index = new ArrayList<>();
+    this.attrs = new ArrayList<>();
+    this.metaInfoInfos = new ArrayList<>();
+    ArrayList<Column> newcolumns = new ArrayList<Column>();
+    for(int i = 0; i < columnSize; i++)
+    {
+      int oldIndex = table.getIndex(attrName.get(i));
+      index.add(oldIndex);
+      newcolumns.add(table.columns.get(oldIndex));
+    }
+    Column[] mColumns = newcolumns.toArray(new Column[newcolumns.size()]);
+    newTable = new Table(table.getDatabaseName(), "queryTable", mColumns);
+    Iterator<Row> iterator = table.iterator();
+    while(iterator.hasNext()){
+      Row row = iterator.next();
+      ArrayList<Entry> newRowList = new ArrayList<>();
+      for(int i = 0; i < columnSize; i++)
+      {
+        Entry entry = row.getEntries().get(this.index.get(i));
+        newRowList.add(entry);
+        //newRow.appendEntries(row.getEntries().get(this.index.get(i)));
+      }
+      Row newRow = new Row((Entry[])newRowList.toArray());
+      newTable.insert(newRow);
+    }
+  }
+
   public QueryResult(Table leftQueryTable, Table rightQueryTable, String leftAttrName, String rightAttrName) throws IOException, ClassNotFoundException {
     // TODO
     this.index = new ArrayList<>();
@@ -36,7 +66,7 @@ public class QueryResult {
     newcolumns.addAll(rightQueryTable.columns);
     Column[] mColumns = newcolumns.toArray(new Column[newcolumns.size()]);
 
-    newTable = new Table(leftQueryTable.getDatabaseName(),"table", mColumns);
+    newTable = new Table(leftQueryTable.getDatabaseName(),"queryTable", mColumns);
 
     Iterator<Row> leftIterator = leftQueryTable.iterator();
     Iterator<Row> rightIterator = rightQueryTable.iterator();
@@ -47,6 +77,7 @@ public class QueryResult {
     while(leftIterator.hasNext())
     {
       Row row1 = leftIterator.next();
+      rightIterator = rightQueryTable.iterator();
       while (rightIterator.hasNext())
       {
         LinkedList<Row> mRows = new LinkedList<Row>();

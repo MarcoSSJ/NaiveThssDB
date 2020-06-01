@@ -64,6 +64,7 @@ public class Table implements Iterable<Row>, Serializable {
             if (primaryIndex == -1) {
                 //no primary key exception
             }
+            serialize();
         }
         else{
             this.databaseName = databaseName;
@@ -84,7 +85,7 @@ public class Table implements Iterable<Row>, Serializable {
         }
     }
 
-    public void insert(Row row) {
+    public void insert(Row row) throws IOException {
         // TODO
         Entry entry = row.getEntries().get(primaryIndex);
         try{
@@ -236,19 +237,19 @@ public class Table implements Iterable<Row>, Serializable {
         }
     }
 
-    public ArrayList<Row> select() {
-        ArrayList rows = new ArrayList<Row>();
+    public ArrayList<String> select() {
+        ArrayList<String> rows = new ArrayList<>();
         TableIterator tableIterator = new TableIterator(this);
         while(tableIterator.hasNext())
         {
             Row currentRow = tableIterator.next();
-            rows.add(currentRow);
+            rows.add(currentRow.toString());
         }
         return rows;
     }
 
-    public ArrayList<Row> select(String comparator, String attrName, String attrValue){
-        ArrayList rows = new ArrayList<Row>();
+    public ArrayList<String> select(String comparator, String attrName, String attrValue){
+        ArrayList<String> rows = new ArrayList<>();
         TableIterator tableIterator = new TableIterator(this);
         int attrIndex = this.getIndex(attrName);
         Entry attrValueEntry = new Entry(attrValue);
@@ -259,7 +260,8 @@ public class Table implements Iterable<Row>, Serializable {
                     Row currentRow = tableIterator.next();
                     //System.out.println(currentRow);
                     if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)==0){
-                        rows.add(currentRow);
+                        //System.out.println(currentRow.toString());
+                        rows.add(currentRow.toString());
                     }
                 }
                 break;
@@ -267,7 +269,7 @@ public class Table implements Iterable<Row>, Serializable {
                 while(tableIterator.hasNext()){
                     Row currentRow = tableIterator.next();
                     if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)<0){
-                        rows.add(currentRow);
+                        rows.add(currentRow.toString());
                     }
                 }
                 break;
@@ -275,7 +277,7 @@ public class Table implements Iterable<Row>, Serializable {
                 while(tableIterator.hasNext()){
                     Row currentRow = tableIterator.next();
                     if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)>0){
-                        rows.add(currentRow);
+                        rows.add(currentRow.toString());
                     }
                 }
                 break;
@@ -283,7 +285,7 @@ public class Table implements Iterable<Row>, Serializable {
                 while(tableIterator.hasNext()){
                     Row currentRow = tableIterator.next();
                     if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)<=0){
-                        rows.add(currentRow);
+                        rows.add(currentRow.toString());
                     }
                 }
                 break;
@@ -291,7 +293,7 @@ public class Table implements Iterable<Row>, Serializable {
                 while(tableIterator.hasNext()){
                     Row currentRow = tableIterator.next();
                     if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)>=0){
-                        rows.add(currentRow);
+                        rows.add(currentRow.toString());
                     }
                 }
                 break;
@@ -299,7 +301,7 @@ public class Table implements Iterable<Row>, Serializable {
                 while(tableIterator.hasNext()){
                     Row currentRow = tableIterator.next();
                     if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)!=0){
-                        rows.add(currentRow);
+                        rows.add(currentRow.toString());
                     }
                 }
                 break;
@@ -336,6 +338,10 @@ public class Table implements Iterable<Row>, Serializable {
         oos = new ObjectOutputStream(new FileOutputStream(name));
         oos.writeObject(info);
         oos.close();
+    }
+
+    public void write() throws IOException {
+        serialize();
     }
 
     private ArrayList<Row> deserialize() throws IOException, ClassNotFoundException {

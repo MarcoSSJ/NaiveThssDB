@@ -64,6 +64,11 @@ public class Database {
     oos.close();
   }
 
+  public void write() throws IOException {
+    persist();
+  }
+
+
   public void create(String name, Column[] columns) throws IOException, ClassNotFoundException {
     // TODO
     if(tables.get(name)!=null){
@@ -71,18 +76,20 @@ public class Database {
     }
     Table table = new Table(this.name, name, columns);
     tables.put(name, table);
+    //persist();
   }
 
   public Table getTable(String name){
     return tables.get(name);
   }
 
-  public void drop(String name) {
+  public void drop(String name) throws IOException {
     // TODO
     if(tables.get(name)==null){
       //exception
     }
     tables.remove(name);
+    //persist();
   }
 
   public String select(QueryTable[] queryTables) throws IOException, ClassNotFoundException {
@@ -116,6 +123,6 @@ public class Database {
 
   public void quit() throws IOException {
     // TODO
-    persist();
+    //persist();
   }
 }
