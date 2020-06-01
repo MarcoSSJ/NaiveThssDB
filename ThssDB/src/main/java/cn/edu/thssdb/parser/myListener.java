@@ -417,7 +417,7 @@ public class myListener extends SQLBaseListener{
 		{
 			Table table = database.getTable(single_table);
 			//单表查询
-			if(selectAll)
+			if(selectAll)//选择全部
 			{
 				for(int i = 0; i < table.columns.size(); i++)
 					resp.columnsList.add(table.columns.get(i).getName());
@@ -426,7 +426,7 @@ public class myListener extends SQLBaseListener{
 				else
 					resultRows = table.select(comparator, where_attribute, where_valve);
 			}
-			else
+			else//select 有东西
 			{
 				for (String resultColumn : resultColumns)
 					resultIndex.add(table.getIndex(resultColumn));
@@ -439,11 +439,14 @@ public class myListener extends SQLBaseListener{
 		}
 		else
 		{
+			//TODO:select tablename.attributename还没做
+			//TODO:多表查询时好像很多都还没做qwq，好像只完成了select *,别的情况都没有实现
 			try {
 				Table leftTable = database.getTable(left_table);
 				Table rightTable = database.getTable(right_table);
 				QueryResult queryResult = new QueryResult(leftTable, rightTable, left_attribute, right_attribute);
 				//多表查询
+				//TODO：resultIndex,resultTable这里还没有用上
 				if (selectAll)
 					resultRows = queryResult.newTable.select();
 				else
