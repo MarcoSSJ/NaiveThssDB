@@ -85,7 +85,7 @@ public class Table implements Iterable<Row>, Serializable {
         }
     }
 
-    public void insert(Row row) throws IOException {
+    public void insert(Row row){
         // TODO
         Entry entry = row.getEntries().get(primaryIndex);
         try{
