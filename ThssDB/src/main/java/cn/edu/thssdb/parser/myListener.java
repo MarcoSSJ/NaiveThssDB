@@ -89,7 +89,6 @@ public class myListener extends SQLBaseListener{
 	public void exitUse_db_stmt(SQLParser.Use_db_stmtContext ctx) {
 
 		String dbName = ctx.database_name().getText();
-		System.out.println(sessionId+" use "+dbName);
 		//改变数据库
 		manager.use(sessionId, dbName);
 	}
@@ -447,13 +446,25 @@ public class myListener extends SQLBaseListener{
 				QueryResult queryResult = new QueryResult(leftTable, rightTable, left_attribute, right_attribute);
 				//多表查询
 				//TODO：resultIndex,resultTable这里还没有用上
-				if (selectAll)
-					resultRows = queryResult.newTable.select();
-				else
+				if (selectAll) {
+					for(int i = 0; i < queryResult.newTable.columns.size(); i++)
+						resp.columnsList.add(queryResult.newTable.columns.get(i).getName());
+					if(!hasWhere) {
+						resultRows = queryResult.newTable.select();
+					}
+					else{
+						resultRows = queryResult.newTable.select(comparator, where_attribute, where_valve);
+					}
+				}
+				else {
+					for (String resultColumn : resultColumns)
+						resultIndex.add(queryResult.newTable.getIndex(resultColumn));
+					resp.columnsList.addAll(resultColumns);
 					if (!hasWhere)
 						resultRows = queryResult.newTable.select();
 					else
 						resultRows = queryResult.newTable.select(comparator, where_attribute, where_valve);
+				}
 			}
 			catch (Exception e)
 			{
