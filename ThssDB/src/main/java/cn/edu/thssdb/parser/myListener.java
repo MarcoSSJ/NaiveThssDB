@@ -461,7 +461,7 @@ public class myListener extends SQLBaseListener{
 					if (!hasWhere) {
 						resultRows = queryTable.result();
 					} else {
-						queryTable.query(comparator, where_attribute, where_valve);
+						queryTable.query(comparator, where_attribute, where_value);
 						resultRows = queryTable.result();
 						//resultRows = table.select(comparator, where_attribute, where_valve);
 					}
@@ -474,7 +474,7 @@ public class myListener extends SQLBaseListener{
 						QueryResult queryResult = new QueryResult(queryTable, resultColumns);
 						resultRows = queryResult.result();
 					} else {
-						queryTable.query(comparator, where_attribute, where_valve);
+						queryTable.query(comparator, where_attribute, where_value);
 						QueryResult queryResult = new QueryResult(queryTable, resultColumns);
 						resultRows = queryResult.result();
 						//resultRows = table.select(comparator, where_attribute, where_valve);
@@ -511,7 +511,7 @@ public class myListener extends SQLBaseListener{
 					}
 					else{
 						//resultRows = queryResult.newTable.select(comparator, where_attribute, where_valve);
-						queryTable.query(comparator, where_attribute, where_valve);
+						queryTable.query(comparator, where_attribute, where_value);
 						resultRows = queryTable.result();
 					}
 				}
@@ -522,7 +522,7 @@ public class myListener extends SQLBaseListener{
 						resultRows = queryResult.result();
 					}
 					else {
-						queryTable.query(comparator, where_attribute, where_valve);
+						queryTable.query(comparator, where_attribute, where_value);
 						QueryResult queryResult = new QueryResult(queryTable, resultColumns);
 						resultRows = queryResult.result();
 						//resultRows = queryResult.newTable.select(comparator, where_attribute, where_valve);
