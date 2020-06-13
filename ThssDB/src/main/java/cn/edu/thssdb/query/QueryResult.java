@@ -15,94 +15,64 @@ import javafx.scene.control.Cell;
 
 public class QueryResult {
 
-  private List<MetaInfo> metaInfoInfos;
-  private List<Integer> index;
-  private List<Cell> attrs;
-  public Table newTable;
+	private List<MetaInfo> metaInfoInfos;
+	private List<Integer> index;
+	private List<Cell> attrs;
+	public Table newTable;
 
+	public QueryResult(Table leftQueryTable, Table rightQueryTable, String leftAttrName, String rightAttrName) throws IOException, ClassNotFoundException {
+		// TODO
+		this.index = new ArrayList<>();
+		this.attrs = new ArrayList<>();
+		this.metaInfoInfos = new ArrayList<MetaInfo>();
+		ArrayList<Column> newcolumns = new ArrayList<Column>();
 
-  public QueryResult(Table table, ArrayList<String> attrName) throws IOException, ClassNotFoundException {
-    int columnSize = attrName.size();
-    this.index = new ArrayList<>();
-    this.attrs = new ArrayList<>();
-    this.metaInfoInfos = new ArrayList<>();
-    ArrayList<Column> newcolumns = new ArrayList<Column>();
-    for(int i = 0; i < columnSize; i++)
-    {
-      int oldIndex = table.getIndex(attrName.get(i));
-      index.add(oldIndex);
-      newcolumns.add(table.columns.get(oldIndex));
-    }
-    Column[] mColumns = newcolumns.toArray(new Column[newcolumns.size()]);
-    newTable = new Table(table.getDatabaseName(), "queryTable", mColumns);
-    Iterator<Row> iterator = table.iterator();
-    while(iterator.hasNext()){
-      Row row = iterator.next();
-      ArrayList<Entry> newRowList = new ArrayList<>();
-      for(int i = 0; i < columnSize; i++)
-      {
-        Entry entry = row.getEntries().get(this.index.get(i));
-        newRowList.add(entry);
-        //newRow.appendEntries(row.getEntries().get(this.index.get(i)));
-      }
-      Row newRow = new Row((Entry[])newRowList.toArray());
-      newTable.insert(newRow);
-    }
-  }
+		MetaInfo leftInfo = new MetaInfo(leftQueryTable.tableName,leftQueryTable.columns);
+		metaInfoInfos.add(leftInfo);
+		newcolumns.addAll(leftQueryTable.columns);
 
-  public QueryResult(Table leftQueryTable, Table rightQueryTable, String leftAttrName, String rightAttrName) throws IOException, ClassNotFoundException {
-    // TODO
-    this.index = new ArrayList<>();
-    this.attrs = new ArrayList<>();
-    this.metaInfoInfos = new ArrayList<MetaInfo>();
-    ArrayList<Column> newcolumns = new ArrayList<Column>();
+		MetaInfo rightInfo = new MetaInfo(rightQueryTable.tableName,rightQueryTable.columns);
+		metaInfoInfos.add(rightInfo);
+		newcolumns.addAll(rightQueryTable.columns);
+		Column[] mColumns = newcolumns.toArray(new Column[newcolumns.size()]);
 
-    MetaInfo leftInfo = new MetaInfo(leftQueryTable.tableName,leftQueryTable.columns);
-    metaInfoInfos.add(leftInfo);
-    newcolumns.addAll(leftQueryTable.columns);
+		newTable = new Table(leftQueryTable.getDatabaseName(),"queryTable", mColumns);
 
-    MetaInfo rightInfo = new MetaInfo(rightQueryTable.tableName,rightQueryTable.columns);
-    metaInfoInfos.add(rightInfo);
-    newcolumns.addAll(rightQueryTable.columns);
-    Column[] mColumns = newcolumns.toArray(new Column[newcolumns.size()]);
+		Iterator<Row> leftIterator = leftQueryTable.iterator();
+		Iterator<Row> rightIterator = rightQueryTable.iterator();
 
-    newTable = new Table(leftQueryTable.getDatabaseName(),"queryTable", mColumns);
+		int leftIndex = leftQueryTable.getIndex(leftAttrName);
+		int rightIndex = rightQueryTable.getIndex(rightAttrName);
 
-    Iterator<Row> leftIterator = leftQueryTable.iterator();
-    Iterator<Row> rightIterator = rightQueryTable.iterator();
+		while(leftIterator.hasNext())
+		{
+			Row row1 = leftIterator.next();
+			rightIterator = rightQueryTable.iterator();
+			while (rightIterator.hasNext())
+			{
+				LinkedList<Row> mRows = new LinkedList<Row>();
+				Row row2 = rightIterator.next();
+				if(row1.getEntries().get(leftIndex).compareTo(row2.getEntries().get(rightIndex))==0) {
+					mRows.add(row1);
+					mRows.add(row2);
+					newTable.insert(combineRow(mRows));
+				}
+			}
+		}
+	}
 
-    int leftIndex = leftQueryTable.getIndex(leftAttrName);
-    int rightIndex = rightQueryTable.getIndex(rightAttrName);
+	public static Row combineRow(LinkedList<Row> rows) {
+		// TODO
+		Row newRow = new Row();
+		for(int i = 0;i<rows.size();i++)
+		{
+			newRow.appendEntries(rows.get(i).getEntries());
+		}
+		return newRow;
+	}
 
-    while(leftIterator.hasNext())
-    {
-      Row row1 = leftIterator.next();
-      rightIterator = rightQueryTable.iterator();
-      while (rightIterator.hasNext())
-      {
-        LinkedList<Row> mRows = new LinkedList<Row>();
-        Row row2 = rightIterator.next();
-        if(row1.getEntries().get(leftIndex).compareTo(row2.getEntries().get(rightIndex))==0) {
-          mRows.add(row1);
-          mRows.add(row2);
-          newTable.insert(combineRow(mRows));
-        }
-      }
-    }
-  }
-
-  public static Row combineRow(LinkedList<Row> rows) {
-    // TODO
-    Row newRow = new Row();
-    for(int i = 0;i<rows.size();i++)
-    {
-      newRow.appendEntries(rows.get(i).getEntries());
-    }
-    return newRow;
-  }
-
-  public Row generateQueryRecord(Row row) {
-    // TODO
-    return null;
-  }
+	public Row generateQueryRecord(Row row) {
+		// TODO
+		return null;
+	}
 }
