@@ -5,7 +5,7 @@ import cn.edu.thssdb.rpc.thrift.ExecuteStatementResp;
 import cn.edu.thssdb.schema.*;
 import cn.edu.thssdb.type.ColumnType;
 import cn.edu.thssdb.utils.Global;
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
+//import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -65,6 +65,7 @@ public class myListener extends SQLBaseListener{
 
 	@Override
 	public void exitCreate_db_stmt(SQLParser.Create_db_stmtContext ctx){
+
 		try {
 			String dbName = ctx.database_name().getText();
 			//看一看是否存在该数据库，不存在创建，存在报错，需要接口
@@ -183,7 +184,6 @@ public class myListener extends SQLBaseListener{
     	*/
 		//简单版本只取第一个value_entry
 		String origin_value = ctx.value_entry(0).getText().trim();//去空格
-		System.out.println(origin_value);
 		//不知道这里为什么拿literal value拿到的是一串数字？？？
 //		List<SQLParser.Literal_valueContext> literal_valueContexts = ctx.value_entry(0).literal_value();
 //		System.out.println(literal_valueContexts.toString());
@@ -234,10 +234,11 @@ public class myListener extends SQLBaseListener{
 		}
 		try {
 			table.insert(insertRow);
-			if(!manager.isTransaction(sessionId))
-				table.write();
+			if(!manager.isTransaction(sessionId)) {
+				//table.write();
+			}
 		}
-		catch (IOException e){
+		catch (Exception e){
 			//TODO:exception
 		}
 	}

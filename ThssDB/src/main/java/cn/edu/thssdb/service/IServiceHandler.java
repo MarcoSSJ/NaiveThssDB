@@ -30,7 +30,7 @@ public class IServiceHandler implements IService.Iface {
 		ConnectResp resp = new ConnectResp();
 		String usr = req.username;
 		String pwd = req.password;
-		if (usr.equals("SA") && pwd.equals("")) {//先写死，都是管理员与空密码
+		if (usr.equals("username") && pwd.equals("password")) {//先写死，都是管理员与空密码
 			ThssDB server = ThssDB.getInstance();
 			resp.setSessionId(server.addSession());
 			resp.setStatus(new Status(Global.SUCCESS_CODE));
@@ -42,8 +42,8 @@ public class IServiceHandler implements IService.Iface {
 	}
 
 	@Override
-	public DisconnetResp disconnect(DisconnetReq req) throws TException {
-		DisconnetResp resp = new DisconnetResp();
+	public DisconnectResp disconnect(DisconnectReq req) throws TException {
+		DisconnectResp resp = new DisconnectResp();
 
 		ThssDB server = ThssDB.getInstance();
 		boolean res = server.deleteSession(req.getSessionId());
@@ -59,17 +59,14 @@ public class IServiceHandler implements IService.Iface {
 
 		ThssDB thssDB = ThssDB.getInstance();
 		ExecuteStatementResp resp = new ExecuteStatementResp();
-		System.out.println("execute");
 		if (thssDB.checkSession(req.getSessionId())) {
 			String statement = req.statement;
 			long sessionId = req.getSessionId();
-			System.out.println(statement);
 			CodePointCharStream charStream = CharStreams.fromString(statement);
 			SQLLexer lexer = new SQLLexer(charStream);
 			CommonTokenStream tokens = new CommonTokenStream(lexer);
 			SQLParser parser = new SQLParser(tokens);
 			ParseTree tree = parser.parse();
-			System.out.println(tree.toStringTree(parser));
 			ParseTreeWalker walker = new ParseTreeWalker();
 			myListener listener = new myListener();
 			listener.setSessionId(sessionId);
