@@ -126,6 +126,10 @@ public class Manager {
     return databases.get(name);
   }
 
+  public void write() throws IOException {
+    persist();
+  }
+
   public void beginTransaction(Long sessionID){
     transaction.put(sessionID, Boolean.TRUE);
   }

@@ -145,17 +145,20 @@ public class MyClient {
 			ExecuteStatementResp resp = client.executeStatement(req);
 			if (resp.hasResult) {
 				//TODO: 这里调用函数执行语句，并输出结果
-				if(resp.rowList!=null){
+				if(resp.columnsList!=null){
 					System.out.println(resp.columnsList);
+				}
+				if(resp.rowList!=null){
 					for(int i = 0; i < resp.rowList.size(); i++)
 					{
-						System.out.println(resp.rowList.get(i));
+						System.out.println(resp.rowList.get(i).toString());
 					}
 				}
 			}
-			else
+			else {
 				//TODO:输出错误信息
-				println("错误信息");
+				println("错误信息:"+ resp.status.msg);
+			}
 		} catch (TException e) {
 			logger.error(e.getMessage());
 		}

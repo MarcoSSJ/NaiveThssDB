@@ -15,18 +15,24 @@ public class QueryTable implements Iterator<Row> {
 	int cursor;       // index of next element to return
 	int lastRet = -1; // index of last element returned; -1 if no such
 	int number;
-	public String databaseName;
-	public String tableName;
 	public ArrayList<Column> columns;
 	public ArrayList<Row> rows;
 	private List<MetaInfo> metaInfoInfos;
-	private List<Integer> index;
-	private List<Cell> attrs;
+
+
+	public QueryTable(Table table){
+		//this.index = new ArrayList<>();
+		this.metaInfoInfos = new ArrayList<>();
+		this.columns = table.columns;
+		this.rows = new ArrayList<>();
+		Iterator<Row> iterator = table.iterator();
+		while (iterator.hasNext()){
+			this.rows.add(iterator.next());
+		}
+	}
 
 	public QueryTable(Table leftQueryTable, Table rightQueryTable, String leftAttrName, String rightAttrName) throws IOException, ClassNotFoundException {
 		// TODO
-		this.index = new ArrayList<>();
-		this.attrs = new ArrayList<>();
 		this.metaInfoInfos = new ArrayList<>();
 		this.columns = new ArrayList<>();
 		this.rows = new ArrayList<>();
@@ -62,6 +68,73 @@ public class QueryTable implements Iterator<Row> {
 		}
 	}
 
+	public void query(String comparator, String attrName, String attrValue){
+		ArrayList<Row> newRows = new ArrayList<>();
+		int attrIndex = -1;
+		for(int i = 0; i < columns.size(); i++){
+			if(columns.get(i).compareTo(attrName)==0){
+				attrIndex = i;
+				break;
+			}
+		}
+		Iterator iterator = rows.iterator();
+		Entry attrValueEntry = new Entry(attrValue);
+		switch (comparator)
+		{
+			case "=":
+				while(iterator.hasNext()){
+					Row currentRow = (Row) iterator.next();
+					if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)==0){
+						newRows.add(currentRow);
+					}
+				}
+				break;
+			case "<":
+				while(iterator.hasNext()){
+					Row currentRow = (Row) iterator.next();
+					if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)<0){
+						newRows.add(currentRow);
+					}
+				}
+				break;
+			case ">":
+				while(iterator.hasNext()){
+					Row currentRow = (Row) iterator.next();
+					if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)>0){
+						newRows.add(currentRow);
+					}
+				}
+				break;
+			case "<=":
+				while(iterator.hasNext()){
+					Row currentRow = (Row) iterator.next();
+					if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)<=0){
+						newRows.add(currentRow);
+					}
+				}
+				break;
+			case ">=":
+				while(iterator.hasNext()){
+					Row currentRow = (Row) iterator.next();
+					if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)>=0){
+						newRows.add(currentRow);
+					}
+				}
+				break;
+			case "<>":
+				while(iterator.hasNext()){
+					Row currentRow = (Row) iterator.next();
+					if(currentRow.getEntries().get(attrIndex).compareTo(attrValueEntry)!=0){
+						newRows.add(currentRow);
+					}
+				}
+				break;
+			default:
+				break;
+		}
+		this.rows = newRows;
+	}
+
 	@Override
 	public boolean hasNext() {
 		// TODO
@@ -86,6 +159,22 @@ public class QueryTable implements Iterator<Row> {
 	public void reset(){
 		cursor = 0;
 		lastRet = -1;
+	}
+
+	public void show(){
+		Iterator iterator = rows.iterator();
+		while (iterator.hasNext()){
+			System.out.println(iterator.next().toString());
+		}
+	}
+
+	public ArrayList<String> result(){
+		ArrayList<String> res = new ArrayList<>();
+		Iterator iterator = rows.iterator();
+		while (iterator.hasNext()){
+			res.add(iterator.next().toString());
+		}
+		return res;
 	}
 
 }

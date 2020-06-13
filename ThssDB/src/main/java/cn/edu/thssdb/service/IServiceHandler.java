@@ -4,6 +4,7 @@ import cn.edu.thssdb.parser.SQLLexer;
 import cn.edu.thssdb.parser.SQLParser;
 import cn.edu.thssdb.parser.myListener;
 import cn.edu.thssdb.rpc.thrift.*;
+import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.server.ThssDB;
 import cn.edu.thssdb.utils.Global;
 import org.apache.thrift.TException;
@@ -13,6 +14,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import java.io.IOException;
 import java.util.Date;
 
 public class IServiceHandler implements IService.Iface {
@@ -46,6 +48,13 @@ public class IServiceHandler implements IService.Iface {
 		DisconnectResp resp = new DisconnectResp();
 
 		ThssDB server = ThssDB.getInstance();
+		Manager manager = Manager.getInstance();
+		try {
+			manager.write();
+		}
+		catch (IOException e){
+			//
+		}
 		boolean res = server.deleteSession(req.getSessionId());
 		if(res)
 			resp.setStatus(new Status(Global.SUCCESS_CODE));
@@ -76,7 +85,7 @@ public class IServiceHandler implements IService.Iface {
 		else {
 			// TODO
 		}
-		resp.setStatus(new Status(Global.SUCCESS_CODE));
+		//resp.setStatus(new Status(Global.SUCCESS_CODE));
 		return resp;
 	}
 }

@@ -26,7 +26,12 @@ public class Entry implements Comparable<Entry>, Serializable {
   }
 
   public String toString() {
-    return value.toString();
+    try {
+      return value.toString();
+    }
+    catch (NullPointerException e){
+      return "null";
+    }
   }
 
   @Override

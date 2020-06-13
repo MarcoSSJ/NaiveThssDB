@@ -156,9 +156,8 @@ public class Client {
         "select s_id, s_name from student where dept_name = 'Physics';",
         "select course_id, title from course join department on course.dept_name = department.dept_name where building <> 'Palmer';",
         "select s_id from instructor join advisor on instructor.i_id = advisor.i_id where i_name = 'Luo';",
-            "select * from instructor join advisor on instructor.i_id = advisor.i_id;",
     };
-    int[] results = {2000, 92, 96, 182, 44, 0};
+    int[] results = {2000, 92, 96, 182, 44};
     for (int i = 0; i < statements.length; i++) {
       ExecuteStatementReq req = new ExecuteStatementReq(sessionId, statements[i]);
       ExecuteStatementResp resp = client.executeStatement(req);
@@ -170,13 +169,8 @@ public class Client {
       if (resp.getRowList().size() == results[i]) {
         println("The Result Set is Correct!");
       } else {
+        System.out.println(resp.getRowList().size());
         println("The Result Set is Wrong!");
-      }
-      if(i==5){
-        List<List<String>> li = resp.getRowList();
-        for(int j = 0; j < li.size(); j++){
-          System.out.println(li.get(j).toString());
-        }
       }
     }
     println("It costs " + (System.currentTimeMillis() - startTime) + "ms.");

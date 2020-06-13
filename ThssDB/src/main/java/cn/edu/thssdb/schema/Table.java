@@ -1,6 +1,7 @@
 package cn.edu.thssdb.schema;
 
 import cn.edu.thssdb.exception.KeyNotExistException;
+import cn.edu.thssdb.exception.RowExistException;
 import cn.edu.thssdb.index.BPlusTree;
 import cn.edu.thssdb.type.ColumnType;
 import javafx.util.Pair;
@@ -91,7 +92,7 @@ public class Table implements Iterable<Row>, Serializable {
         try{
             index.get(entry);
             //exception
-
+            throw new RowExistException();
         }
         catch(KeyNotExistException e){
             index.put(entry, row);

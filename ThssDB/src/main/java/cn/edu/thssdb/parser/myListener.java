@@ -1,4 +1,6 @@
 package cn.edu.thssdb.parser;
+import cn.edu.thssdb.exception.RowExistException;
+import cn.edu.thssdb.exception.TableNotExistException;
 import cn.edu.thssdb.query.QueryTable;
 import cn.edu.thssdb.rpc.thrift.Status;
 import cn.edu.thssdb.query.QueryResult;
@@ -93,6 +95,24 @@ public class myListener extends SQLBaseListener{
 		String dbName = ctx.database_name().getText();
 		//改变数据库
 		manager.use(sessionId, dbName);
+	}
+
+	@Override
+	public void exitShow_meta_stmt(SQLParser.Show_meta_stmtContext ctx){
+		String tableName = ctx.table_name().getText();
+		ArrayList<String> tableInfos = new ArrayList();
+		Database database = manager.getDatabase(sessionId);
+		Table table = database.getTable(tableName);
+
+		String[] columns = {"name", "type", "primary", "notNull", "maxLength"};
+		resp.columnsList = new ArrayList<>();
+		resp.columnsList.addAll(Arrays.asList(columns));
+		resp.rowList = new ArrayList<>();
+		for(int i = 0; i < table.columns.size(); i++){
+			Column column = table.columns.get(i);
+			resp.rowList.add(Arrays.asList(column.toString().split(",")));
+		}
+		resp.hasResult = true;
 	}
 
 	@Override
@@ -229,18 +249,32 @@ public class myListener extends SQLBaseListener{
 				for(j = 0; j < table_column_num; j++)
 					if(table.columns.get(j).name.equals(column_name[i]))
 						break;
-				table_entry[j] = new Entry(entry[i]);
+				table_entry[j] = new Entry(entry[i].value);
 			}
 			insertRow = new Row(table_entry);
+			for(int i = 0; i < table_column_num; i++){
+				if(insertRow.getEntries().get(i).value==null&&table.columns.get(i).isNotNull()){
+					this.success = false;
+					status.setCode(Global.FAILURE_CODE);
+					String msg = table.columns.get(i).getName() + " can not be null";
+					status.setMsg(msg);
+					return;
+				}
+			}
 		}
 		try {
 			table.insert(insertRow);
 			if(!manager.isTransaction(sessionId)) {
-				table.write();
+				//table.write();
 			}
 		}
-		catch (Exception e){
+		catch (RowExistException e){
 			//TODO:exception
+			this.success = false;
+			status.setCode(Global.FAILURE_CODE);
+			String msg = "row has already exist";
+			status.setMsg(msg);
+			return;
 		}
 	}
 
@@ -415,27 +449,46 @@ public class myListener extends SQLBaseListener{
 			hasWhere = false;
 
 		if(isSingleTable)
-		{
-			Table table = database.getTable(single_table);
-			//单表查询
-			if(selectAll)//选择全部
-			{
-				for(int i = 0; i < table.columns.size(); i++)
-					resp.columnsList.add(table.columns.get(i).getName());
-				if(!hasWhere)
-					resultRows = table.select();
-				else
-					resultRows = table.select(comparator, where_attribute, where_valve);
+		{	try{
+				Table table = database.getTable(single_table);
+				QueryTable queryTable = new QueryTable(table);
+				//单表查询
+
+				if (selectAll)//选择全部
+				{
+					for (int i = 0; i < queryTable.columns.size(); i++)
+						resp.columnsList.add(queryTable.columns.get(i).getName());
+					if (!hasWhere) {
+						resultRows = queryTable.result();
+					} else {
+						queryTable.query(comparator, where_attribute, where_valve);
+						resultRows = queryTable.result();
+						//resultRows = table.select(comparator, where_attribute, where_valve);
+					}
+				} else//select 有东西
+				{
+					//for (String resultColumn : resultColumns)
+					//	resultIndex.add(table.getIndex(resultColumn));
+					resp.columnsList.addAll(resultColumns);
+					if (!hasWhere) {
+						QueryResult queryResult = new QueryResult(queryTable, resultColumns);
+						resultRows = queryResult.result();
+					} else {
+						queryTable.query(comparator, where_attribute, where_valve);
+						QueryResult queryResult = new QueryResult(queryTable, resultColumns);
+						resultRows = queryResult.result();
+						//resultRows = table.select(comparator, where_attribute, where_valve);
+					}
+				}
 			}
-			else//select 有东西
+			catch (TableNotExistException e)
 			{
-				for (String resultColumn : resultColumns)
-					resultIndex.add(table.getIndex(resultColumn));
-				resp.columnsList.addAll(resultColumns);
-				if(!hasWhere)
-					resultRows = table.select();
-				else
-					resultRows = table.select(comparator, where_attribute, where_valve);
+				//TODO: exception
+				this.success = false;
+				status.setCode(Global.FAILURE_CODE);
+				String msg = "table does not exist";
+				status.setMsg(msg);
+				return;
 			}
 		}
 		else
@@ -445,50 +498,55 @@ public class myListener extends SQLBaseListener{
 			try {
 				Table leftTable = database.getTable(left_table);
 				Table rightTable = database.getTable(right_table);
-				QueryResult queryResult = new QueryResult(leftTable, rightTable, left_attribute, right_attribute);
+				//QueryResult queryResult = new QueryResult(leftTable, rightTable, left_attribute, right_attribute);
 				//多表查询
 				QueryTable queryTable = new QueryTable(leftTable, rightTable, left_attribute, right_attribute);
-				System.out.println(queryTable.rows.toString());
+				//System.out.println(queryTable.columns.toString());
+				//System.out.println(queryTable.rows.toString());
 				//TODO：resultIndex,resultTable这里还没有用上
 				if (selectAll) {
-					for(int i = 0; i < queryResult.newTable.columns.size(); i++)
-						resp.columnsList.add(queryResult.newTable.columns.get(i).getName());
+					for(int i = 0; i < queryTable.columns.size(); i++)
+						resp.columnsList.add(queryTable.columns.get(i).getName());
 					if(!hasWhere) {
-						resultRows = queryResult.newTable.select();
+						//resultRows = queryResult.newTable.select();
+						resultRows = queryTable.result();
 					}
 					else{
-						resultRows = queryResult.newTable.select(comparator, where_attribute, where_valve);
+						//resultRows = queryResult.newTable.select(comparator, where_attribute, where_valve);
+						queryTable.query(comparator, where_attribute, where_valve);
+						resultRows = queryTable.result();
 					}
 				}
 				else {
-					for (String resultColumn : resultColumns)
-						resultIndex.add(queryResult.newTable.getIndex(resultColumn));
 					resp.columnsList.addAll(resultColumns);
-					if (!hasWhere)
-						resultRows = queryResult.newTable.select();
-					else
-						resultRows = queryResult.newTable.select(comparator, where_attribute, where_valve);
+					if (!hasWhere) {
+						QueryResult queryResult = new QueryResult(queryTable, resultColumns);
+						resultRows = queryResult.result();
+					}
+					else {
+						queryTable.query(comparator, where_attribute, where_valve);
+						QueryResult queryResult = new QueryResult(queryTable, resultColumns);
+						resultRows = queryResult.result();
+						//resultRows = queryResult.newTable.select(comparator, where_attribute, where_valve);
+					}
 				}
 			}
-			catch (Exception e)
+			catch (TableNotExistException e)
 			{
 				//TODO: exception
+				this.success = false;
+				status.setCode(Global.FAILURE_CODE);
+				String msg = "table does not exist";
+				status.setMsg(msg);
+				return;
+			}
+			catch (Exception e){
+				//
 			}
 		}
-		//System.out.println(resultRows.toString());
-		if(selectAll) {
-			for (String resultRow : resultRows)
-				resp.rowList.add(Arrays.asList(resultRow.split(",")));
-		}
-		else{
-			for (String resultRow : resultRows) {
-				ArrayList<String> row = new ArrayList<>();
-				List<String> oldRow = Arrays.asList(resultRow.split(","));
-				for (Integer index : resultIndex)
-					row.add(oldRow.get(index));
-				resp.rowList.add(row);
-			}
-		}
+		for (String resultRow : resultRows)
+			resp.rowList.add(Arrays.asList(resultRow.split(",")));
+
 	}
 
 	public ExecuteStatementResp getResult(){
@@ -496,8 +554,9 @@ public class myListener extends SQLBaseListener{
 			status.setCode(Global.SUCCESS_CODE);
 			resp.hasResult = true;
 		}
-		else
+		else {
 			status.setCode(Global.FAILURE_CODE);
+		}
 		resp.setStatus(status);
 		return resp;
 	}
