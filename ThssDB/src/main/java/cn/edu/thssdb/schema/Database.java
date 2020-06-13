@@ -1,5 +1,6 @@
 package cn.edu.thssdb.schema;
 
+import cn.edu.thssdb.exception.TableNotExistException;
 import cn.edu.thssdb.query.QueryResult;
 import cn.edu.thssdb.query.QueryTable;
 import cn.edu.thssdb.type.ColumnType;
@@ -91,7 +92,11 @@ public class Database {
   }
 
   public Table getTable(String name){
-    return tables.get(name);
+    Table table = tables.get(name);
+    if(table==null){
+      throw new TableNotExistException();
+    }
+    return table;
   }
 
   public void drop(String name) throws IOException {

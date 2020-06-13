@@ -19,6 +19,33 @@ public class QueryResult {
 	private List<Integer> index;
 	private List<Cell> attrs;
 	public Table newTable;
+	private QueryTable queryTable;
+	private ArrayList<String> result;
+
+	public QueryResult(QueryTable queryTable, ArrayList<String> columns)
+	{
+		this.queryTable = queryTable;
+		this.result = new ArrayList<>();
+		index = new ArrayList<>();
+		for(int i = 0; i < columns.size(); i++){
+			for(int j = 0; j < this.queryTable.columns.size(); j++){
+				if(this.queryTable.columns.get(j).compareTo(columns.get(i))==0){
+					index.add(j);
+					break;
+				}
+			}
+		}
+		Iterator iterator = queryTable.rows.iterator();
+		while (iterator.hasNext()){
+			Row row = (Row)iterator.next();
+			ArrayList<String> resRow = new ArrayList<>();
+			for(int i = 0; i < index.size(); i++)
+			{
+				resRow.add(row.getEntries().get(index.get(i)).toString());
+			}
+			result.add(resRow.toString());
+		}
+	}
 
 	public QueryResult(Table leftQueryTable, Table rightQueryTable, String leftAttrName, String rightAttrName) throws IOException, ClassNotFoundException {
 		// TODO
@@ -39,7 +66,7 @@ public class QueryResult {
 		newTable = new Table(leftQueryTable.getDatabaseName(),"queryTable", mColumns);
 
 		Iterator<Row> leftIterator = leftQueryTable.iterator();
-		Iterator<Row> rightIterator = rightQueryTable.iterator();
+		Iterator<Row> rightIterator;
 
 		int leftIndex = leftQueryTable.getIndex(leftAttrName);
 		int rightIndex = rightQueryTable.getIndex(rightAttrName);
@@ -50,7 +77,7 @@ public class QueryResult {
 			rightIterator = rightQueryTable.iterator();
 			while (rightIterator.hasNext())
 			{
-				LinkedList<Row> mRows = new LinkedList<Row>();
+				LinkedList<Row> mRows = new LinkedList<>();
 				Row row2 = rightIterator.next();
 				if(row1.getEntries().get(leftIndex).compareTo(row2.getEntries().get(rightIndex))==0) {
 					mRows.add(row1);
@@ -74,5 +101,16 @@ public class QueryResult {
 	public Row generateQueryRecord(Row row) {
 		// TODO
 		return null;
+	}
+
+	public ArrayList<String> result(){
+		ArrayList<String> res = new ArrayList<>();
+		Iterator iterator = this.result.iterator();
+		while (iterator.hasNext()){
+			String row = iterator.next().toString();
+			row = row.substring(1, row.length()-1);
+			res.add(row);
+		}
+		return res;
 	}
 }

@@ -4,6 +4,7 @@ import cn.edu.thssdb.parser.SQLLexer;
 import cn.edu.thssdb.parser.SQLParser;
 import cn.edu.thssdb.parser.myListener;
 import cn.edu.thssdb.rpc.thrift.*;
+import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.server.ThssDB;
 import cn.edu.thssdb.utils.Global;
 import org.apache.thrift.TException;
@@ -13,6 +14,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import java.io.IOException;
 import java.util.Date;
 
 public class IServiceHandler implements IService.Iface {
@@ -30,7 +32,7 @@ public class IServiceHandler implements IService.Iface {
 		ConnectResp resp = new ConnectResp();
 		String usr = req.username;
 		String pwd = req.password;
-		if (usr.equals("SA") && pwd.equals("")) {//先写死，都是管理员与空密码
+		if (usr.equals("username") && pwd.equals("password")) {//先写死，都是管理员与空密码
 			ThssDB server = ThssDB.getInstance();
 			resp.setSessionId(server.addSession());
 			resp.setStatus(new Status(Global.SUCCESS_CODE));
@@ -42,10 +44,17 @@ public class IServiceHandler implements IService.Iface {
 	}
 
 	@Override
-	public DisconnetResp disconnect(DisconnetReq req) throws TException {
-		DisconnetResp resp = new DisconnetResp();
+	public DisconnectResp disconnect(DisconnectReq req) throws TException {
+		DisconnectResp resp = new DisconnectResp();
 
 		ThssDB server = ThssDB.getInstance();
+		Manager manager = Manager.getInstance();
+		try {
+			manager.write();
+		}
+		catch (IOException e){
+			//
+		}
 		boolean res = server.deleteSession(req.getSessionId());
 		if(res)
 			resp.setStatus(new Status(Global.SUCCESS_CODE));
@@ -59,17 +68,14 @@ public class IServiceHandler implements IService.Iface {
 
 		ThssDB thssDB = ThssDB.getInstance();
 		ExecuteStatementResp resp = new ExecuteStatementResp();
-		System.out.println("execute");
 		if (thssDB.checkSession(req.getSessionId())) {
 			String statement = req.statement;
 			long sessionId = req.getSessionId();
-			System.out.println(statement);
 			CodePointCharStream charStream = CharStreams.fromString(statement);
 			SQLLexer lexer = new SQLLexer(charStream);
 			CommonTokenStream tokens = new CommonTokenStream(lexer);
 			SQLParser parser = new SQLParser(tokens);
 			ParseTree tree = parser.parse();
-			System.out.println(tree.toStringTree(parser));
 			ParseTreeWalker walker = new ParseTreeWalker();
 			myListener listener = new myListener();
 			listener.setSessionId(sessionId);
@@ -79,7 +85,7 @@ public class IServiceHandler implements IService.Iface {
 		else {
 			// TODO
 		}
-		resp.setStatus(new Status(Global.SUCCESS_CODE));
+		//resp.setStatus(new Status(Global.SUCCESS_CODE));
 		return resp;
 	}
 }
