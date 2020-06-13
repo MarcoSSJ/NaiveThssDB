@@ -390,7 +390,7 @@ public class myListener extends SQLBaseListener{
 			}
 		}
 
-		//只做只有一个where条件的情况，where_attribute comparator where_valve
+		//只做只有一个where条件的情况，where_attribute comparator where_value
 		//where attrName = attrValue
         /*
         multiple_condition :
@@ -400,14 +400,14 @@ public class myListener extends SQLBaseListener{
         */
 		String where_attribute = null;
 		String comparator = null;
-		String where_valve = null;
+		String where_value = null;
 		boolean hasWhere = true;
 		if(ctx.multiple_condition()!=null)
 		{
 			where_attribute = ctx.multiple_condition().condition().expression(0).comparer().column_full_name()
 					.column_name().getText();
 			comparator = ctx.multiple_condition().condition().comparator().getText();
-			where_valve = ctx.multiple_condition().condition().expression(1).comparer().literal_value().getText();
+			where_value = ctx.multiple_condition().condition().expression(1).comparer().literal_value().getText();
 		}
 		else
 			hasWhere = false;
@@ -423,7 +423,7 @@ public class myListener extends SQLBaseListener{
 				if(!hasWhere)
 					resultRows = table.select();
 				else
-					resultRows = table.select(comparator, where_attribute, where_valve);
+					resultRows = table.select(comparator, where_attribute, where_value);
 			}
 			else//select 有东西
 			{
@@ -433,19 +433,16 @@ public class myListener extends SQLBaseListener{
 				if(!hasWhere)
 					resultRows = table.select();
 				else
-					resultRows = table.select(comparator, where_attribute, where_valve);
+					resultRows = table.select(comparator, where_attribute, where_value);
 			}
 		}
 		else
 		{
-			//TODO:select tablename.attributename还没做
-			//TODO:多表查询时好像很多都还没做qwq，好像只完成了select *,别的情况都没有实现
 			try {
 				Table leftTable = database.getTable(left_table);
 				Table rightTable = database.getTable(right_table);
 				QueryResult queryResult = new QueryResult(leftTable, rightTable, left_attribute, right_attribute);
 				//多表查询
-				//TODO：resultIndex,resultTable这里还没有用上
 				if (selectAll) {
 					for(int i = 0; i < queryResult.newTable.columns.size(); i++)
 						resp.columnsList.add(queryResult.newTable.columns.get(i).getName());
@@ -453,7 +450,7 @@ public class myListener extends SQLBaseListener{
 						resultRows = queryResult.newTable.select();
 					}
 					else{
-						resultRows = queryResult.newTable.select(comparator, where_attribute, where_valve);
+						resultRows = queryResult.newTable.select(comparator, where_attribute, where_value);
 					}
 				}
 				else {
@@ -463,7 +460,7 @@ public class myListener extends SQLBaseListener{
 					if (!hasWhere)
 						resultRows = queryResult.newTable.select();
 					else
-						resultRows = queryResult.newTable.select(comparator, where_attribute, where_valve);
+						resultRows = queryResult.newTable.select(comparator, where_attribute, where_value);
 				}
 			}
 			catch (Exception e)

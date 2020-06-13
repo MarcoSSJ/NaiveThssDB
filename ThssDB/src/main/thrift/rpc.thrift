@@ -18,7 +18,7 @@ struct ConnectResp{
   2: required i64 sessionId
 }
 
-struct DisconnetReq{
+struct DisconnectReq{
   1: required i64 sessionId
 }
 
