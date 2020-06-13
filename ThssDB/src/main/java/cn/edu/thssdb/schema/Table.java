@@ -98,6 +98,19 @@ public class Table implements Iterable<Row>, Serializable {
         }
     }
 
+    public void insertNoPrimaryKey(Row row){
+        // TODO
+        Entry entry = row.getEntries().get(primaryIndex);
+        try{
+            index.get(entry);
+            //exception
+
+        }
+        catch(KeyNotExistException e){
+            index.put(entry, row);
+        }
+    }
+
     public void delete(Entry entry) {
         // TODO
         if(entry==null){

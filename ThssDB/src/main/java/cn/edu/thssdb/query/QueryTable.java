@@ -5,10 +5,10 @@ import cn.edu.thssdb.schema.Entry;
 import cn.edu.thssdb.schema.Row;
 import cn.edu.thssdb.schema.Table;
 import com.sun.org.apache.xpath.internal.objects.XNull;
+import javafx.scene.control.Cell;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
+import java.io.IOException;
+import java.util.*;
 
 public class QueryTable implements Iterator<Row> {
 
@@ -18,17 +18,48 @@ public class QueryTable implements Iterator<Row> {
 	public String databaseName;
 	public String tableName;
 	public ArrayList<Column> columns;
-	protected ArrayList<Row> rows;
+	public ArrayList<Row> rows;
+	private List<MetaInfo> metaInfoInfos;
+	private List<Integer> index;
+	private List<Cell> attrs;
 
-	QueryTable(Table table, Row[] m_rows, String m_databaseName, String m_tableName, ArrayList<Column> m_columns) {
+	public QueryTable(Table leftQueryTable, Table rightQueryTable, String leftAttrName, String rightAttrName) throws IOException, ClassNotFoundException {
 		// TODO
-		rows = new ArrayList<Row>(Arrays.asList(m_rows));
-		number = rows.size();
-		cursor = 0;
-		lastRet = -1;
-		columns = new ArrayList<Column>(m_columns);
-		tableName = m_tableName;
-		databaseName = m_databaseName;
+		this.index = new ArrayList<>();
+		this.attrs = new ArrayList<>();
+		this.metaInfoInfos = new ArrayList<>();
+		this.columns = new ArrayList<>();
+		this.rows = new ArrayList<>();
+
+		MetaInfo leftInfo = new MetaInfo(leftQueryTable.tableName,leftQueryTable.columns);
+		metaInfoInfos.add(leftInfo);
+		columns.addAll(leftQueryTable.columns);
+
+		MetaInfo rightInfo = new MetaInfo(rightQueryTable.tableName,rightQueryTable.columns);
+		metaInfoInfos.add(rightInfo);
+		columns.addAll(rightQueryTable.columns);
+
+		Iterator<Row> leftIterator = leftQueryTable.iterator();
+		Iterator<Row> rightIterator;
+
+		int leftIndex = leftQueryTable.getIndex(leftAttrName);
+		int rightIndex = rightQueryTable.getIndex(rightAttrName);
+
+		while(leftIterator.hasNext())
+		{
+			Row row1 = leftIterator.next();
+			rightIterator = rightQueryTable.iterator();
+			while (rightIterator.hasNext())
+			{
+				Row row2 = rightIterator.next();
+				if(row1.getEntries().get(leftIndex).compareTo(row2.getEntries().get(rightIndex))==0) {
+					Row newRow = new Row();
+					newRow.appendEntries(row1.getEntries());
+					newRow.appendEntries(row2.getEntries());
+					this.rows.add(newRow);
+				}
+			}
+		}
 	}
 
 	@Override

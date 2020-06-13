@@ -39,7 +39,7 @@ public class QueryResult {
 		newTable = new Table(leftQueryTable.getDatabaseName(),"queryTable", mColumns);
 
 		Iterator<Row> leftIterator = leftQueryTable.iterator();
-		Iterator<Row> rightIterator = rightQueryTable.iterator();
+		Iterator<Row> rightIterator;
 
 		int leftIndex = leftQueryTable.getIndex(leftAttrName);
 		int rightIndex = rightQueryTable.getIndex(rightAttrName);
@@ -50,7 +50,7 @@ public class QueryResult {
 			rightIterator = rightQueryTable.iterator();
 			while (rightIterator.hasNext())
 			{
-				LinkedList<Row> mRows = new LinkedList<Row>();
+				LinkedList<Row> mRows = new LinkedList<>();
 				Row row2 = rightIterator.next();
 				if(row1.getEntries().get(leftIndex).compareTo(row2.getEntries().get(rightIndex))==0) {
 					mRows.add(row1);

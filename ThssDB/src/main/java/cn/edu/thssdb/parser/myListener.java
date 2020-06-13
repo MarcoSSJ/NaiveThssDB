@@ -1,4 +1,5 @@
 package cn.edu.thssdb.parser;
+import cn.edu.thssdb.query.QueryTable;
 import cn.edu.thssdb.rpc.thrift.Status;
 import cn.edu.thssdb.query.QueryResult;
 import cn.edu.thssdb.rpc.thrift.ExecuteStatementResp;
@@ -235,7 +236,7 @@ public class myListener extends SQLBaseListener{
 		try {
 			table.insert(insertRow);
 			if(!manager.isTransaction(sessionId)) {
-				//table.write();
+				table.write();
 			}
 		}
 		catch (Exception e){
@@ -446,6 +447,8 @@ public class myListener extends SQLBaseListener{
 				Table rightTable = database.getTable(right_table);
 				QueryResult queryResult = new QueryResult(leftTable, rightTable, left_attribute, right_attribute);
 				//多表查询
+				QueryTable queryTable = new QueryTable(leftTable, rightTable, left_attribute, right_attribute);
+				System.out.println(queryTable.rows.toString());
 				//TODO：resultIndex,resultTable这里还没有用上
 				if (selectAll) {
 					for(int i = 0; i < queryResult.newTable.columns.size(); i++)
