@@ -21,8 +21,8 @@ public class myListener extends SQLBaseListener{
 	private Manager manager;
 	//private Database database;
 	long sessionId;
-	private ExecuteStatementResp resp = new ExecuteStatementResp();
-	private Status status = new Status();
+	private final ExecuteStatementResp resp = new ExecuteStatementResp();
+	private final Status status = new Status();
 	private boolean success = true;
 
 	public void setSessionId(long sessionId){
@@ -284,12 +284,10 @@ public class myListener extends SQLBaseListener{
 			}
 		}
 		catch (RowExistException e){
-			//TODO:exception
 			this.success = false;
 			status.setCode(Global.FAILURE_CODE);
 			String msg = "row has already exist";
 			status.setMsg(msg);
-			return;
 		}
 	}
 
@@ -346,7 +344,6 @@ public class myListener extends SQLBaseListener{
 		resp.columnsList = new ArrayList<>();
 		ArrayList<String> resultTables = new ArrayList<>();//列来自什么表 tablename
 		ArrayList<String> resultColumns = new ArrayList<>();//查询哪些列 columnname
-		ArrayList<Integer> resultIndex = new ArrayList<>();
 		List<SQLParser.Result_columnContext> result_columnContexts = ctx.result_column();
 		ArrayList<String> resultRows = new ArrayList<>(); //查询结果
 
@@ -413,7 +410,7 @@ public class myListener extends SQLBaseListener{
 		String right_table = "";
 		String left_attribute = "";
 		String right_attribute = "";
-		String temp = "";
+		String temp;
 		if(ctx.table_query(0).table_name().size()==1)
 		{
 			//table_name
@@ -442,7 +439,7 @@ public class myListener extends SQLBaseListener{
 			}
 		}
 
-		//只做只有一个where条件的情况，where_attribute comparator where_valve
+		//只做只有一个where条件的情况，where_attribute comparator where_value
 		//where attrName = attrValue
         /*
         multiple_condition :
@@ -452,14 +449,14 @@ public class myListener extends SQLBaseListener{
         */
 		String where_attribute = null;
 		String comparator = null;
-		String where_valve = null;
+		String where_value = null;
 		boolean hasWhere = true;
 		if(ctx.multiple_condition()!=null)
 		{
 			where_attribute = ctx.multiple_condition().condition().expression(0).comparer().column_full_name()
 					.column_name().getText();
 			comparator = ctx.multiple_condition().condition().comparator().getText();
-			where_valve = ctx.multiple_condition().condition().expression(1).comparer().literal_value().getText();
+			where_value = ctx.multiple_condition().condition().expression(1).comparer().literal_value().getText();
 		}
 		else
 			hasWhere = false;
@@ -477,7 +474,7 @@ public class myListener extends SQLBaseListener{
 					if (!hasWhere) {
 						resultRows = queryTable.result();
 					} else {
-						queryTable.query(comparator, where_attribute, where_valve);
+						queryTable.query(comparator, where_attribute, where_value);
 						resultRows = queryTable.result();
 						//resultRows = table.select(comparator, where_attribute, where_valve);
 					}
@@ -490,7 +487,7 @@ public class myListener extends SQLBaseListener{
 						QueryResult queryResult = new QueryResult(queryTable, resultColumns);
 						resultRows = queryResult.result();
 					} else {
-						queryTable.query(comparator, where_attribute, where_valve);
+						queryTable.query(comparator, where_attribute, where_value);
 						QueryResult queryResult = new QueryResult(queryTable, resultColumns);
 						resultRows = queryResult.result();
 						//resultRows = table.select(comparator, where_attribute, where_valve);
@@ -499,7 +496,6 @@ public class myListener extends SQLBaseListener{
 			}
 			catch (TableNotExistException e)
 			{
-				//TODO: exception
 				this.success = false;
 				status.setCode(Global.FAILURE_CODE);
 				String msg = "table does not exist";
@@ -509,8 +505,6 @@ public class myListener extends SQLBaseListener{
 		}
 		else
 		{
-			//TODO:select tablename.attributename还没做
-			//TODO:多表查询时好像很多都还没做qwq，好像只完成了select *,别的情况都没有实现
 			try {
 				Table leftTable = database.getTable(left_table);
 				Table rightTable = database.getTable(right_table);
@@ -519,7 +513,6 @@ public class myListener extends SQLBaseListener{
 				QueryTable queryTable = new QueryTable(leftTable, rightTable, left_attribute, right_attribute);
 				//System.out.println(queryTable.columns.toString());
 				//System.out.println(queryTable.rows.toString());
-				//TODO：resultIndex,resultTable这里还没有用上
 				if (selectAll) {
 					for(int i = 0; i < queryTable.columns.size(); i++)
 						resp.columnsList.add(queryTable.columns.get(i).getName());
@@ -529,7 +522,7 @@ public class myListener extends SQLBaseListener{
 					}
 					else{
 						//resultRows = queryResult.newTable.select(comparator, where_attribute, where_valve);
-						queryTable.query(comparator, where_attribute, where_valve);
+						queryTable.query(comparator, where_attribute, where_value);
 						resultRows = queryTable.result();
 					}
 				}
@@ -540,7 +533,7 @@ public class myListener extends SQLBaseListener{
 						resultRows = queryResult.result();
 					}
 					else {
-						queryTable.query(comparator, where_attribute, where_valve);
+						queryTable.query(comparator, where_attribute, where_value);
 						QueryResult queryResult = new QueryResult(queryTable, resultColumns);
 						resultRows = queryResult.result();
 						//resultRows = queryResult.newTable.select(comparator, where_attribute, where_valve);
@@ -549,7 +542,6 @@ public class myListener extends SQLBaseListener{
 			}
 			catch (TableNotExistException e)
 			{
-				//TODO: exception
 				this.success = false;
 				status.setCode(Global.FAILURE_CODE);
 				String msg = "table does not exist";
