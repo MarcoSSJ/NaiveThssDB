@@ -64,12 +64,14 @@ public class IServiceHandler implements IService.Iface {
 	}
 
 	@Override
-	public ExecuteStatementResp executeStatement(ExecuteStatementReq req) throws TException {
+	public ExecuteStatementResp executeStatement(ExecuteStatementReq req) throws TException, IOException {
 
 		ThssDB thssDB = ThssDB.getInstance();
+		Manager manager = Manager.getInstance();
 		ExecuteStatementResp resp = new ExecuteStatementResp();
 		if (thssDB.checkSession(req.getSessionId())) {
 			String statement = req.statement;
+			manager.writeLog(statement);
 			long sessionId = req.getSessionId();
 			CodePointCharStream charStream = CharStreams.fromString(statement);
 			SQLLexer lexer = new SQLLexer(charStream);

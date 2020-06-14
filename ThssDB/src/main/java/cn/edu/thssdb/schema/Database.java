@@ -12,22 +12,20 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class Database {
+public class Database{
 
   private String name;
   private HashMap<String, Table> tables;
   ReentrantReadWriteLock lock;
 
-  public static void main(String[] args) throws IOException, ClassNotFoundException {
-    Database db = new Database("testdb");
-    Column column = new Column("c1", ColumnType.INT, 1, false, 100);
-    Column[] columns = {column};
-    Entry entry = new Entry("data");
-    Entry[] entries = {entry};
-    Row row = new Row(entries);
-    db.create("testtable", columns);
-    db.persist();
+  public Database clone(){
+    Database db = new Database();
+    db.name = this.name;
+    db.tables = (HashMap)this.tables.clone();
+    return db;
   }
+
+  public Database(){}
 
   public Database(String name) throws IOException, ClassNotFoundException {
     this.name = name;
@@ -125,7 +123,7 @@ public class Database {
         ObjectInputStream in = new ObjectInputStream(fileIn);
         ArrayList<String> tableList = (ArrayList) in.readObject();
         in.close();
-        System.out.println(tableList);
+        //System.out.println(tableList);
         for(String name:tableList)
         {
           Table table = new Table(this.name, name, null);

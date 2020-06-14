@@ -37,7 +37,8 @@ public class myListener extends SQLBaseListener{
 
 	@Override
 	public void exitCommit_stmt(SQLParser.Commit_stmtContext ctx){
-		Database database = manager.getDatabase(sessionId);
+		Database database = getDatabase();
+		manager.commit(sessionId);
 		try {
 			database.write();
 		}
@@ -48,7 +49,13 @@ public class myListener extends SQLBaseListener{
 
 	@Override
 	public void exitTransaction_stmt(SQLParser.Transaction_stmtContext ctx){
-		manager.beginTransaction(sessionId);
+		try {
+			manager.beginTransaction(sessionId);
+		}
+		catch (Exception e)
+		{
+			//
+		}
 	}
 
 	@Override
@@ -99,20 +106,25 @@ public class myListener extends SQLBaseListener{
 
 	@Override
 	public void exitShow_meta_stmt(SQLParser.Show_meta_stmtContext ctx){
-		String tableName = ctx.table_name().getText();
-		ArrayList<String> tableInfos = new ArrayList();
-		Database database = manager.getDatabase(sessionId);
-		Table table = database.getTable(tableName);
+		try {
+			String tableName = ctx.table_name().getText();
+			ArrayList<String> tableInfos = new ArrayList();
+			Database database = manager.getDatabase(sessionId);
+			Table table = database.getTable(tableName);
 
-		String[] columns = {"name", "type", "primary", "notNull", "maxLength"};
-		resp.columnsList = new ArrayList<>();
-		resp.columnsList.addAll(Arrays.asList(columns));
-		resp.rowList = new ArrayList<>();
-		for(int i = 0; i < table.columns.size(); i++){
-			Column column = table.columns.get(i);
-			resp.rowList.add(Arrays.asList(column.toString().split(",")));
+			String[] columns = {"name", "type", "primary", "notNull", "maxLength"};
+			resp.columnsList = new ArrayList<>();
+			resp.columnsList.addAll(Arrays.asList(columns));
+			resp.rowList = new ArrayList<>();
+			for (int i = 0; i < table.columns.size(); i++) {
+				Column column = table.columns.get(i);
+				resp.rowList.add(Arrays.asList(column.toString().split(",")));
+			}
+			resp.hasResult = true;
 		}
-		resp.hasResult = true;
+		catch (TableNotExistException e){
+
+		}
 	}
 
 	@Override
@@ -183,7 +195,11 @@ public class myListener extends SQLBaseListener{
 		}
 		catch (Exception e)
 		{
-
+			this.success = false;
+			status.setCode(Global.FAILURE_CODE);
+			String msg = "table does not exist";
+			status.setMsg(msg);
+			return;
 		}
 	}
 
@@ -195,8 +211,7 @@ public class myListener extends SQLBaseListener{
     */
 	@Override
 	public void exitInsert_stmt(SQLParser.Insert_stmtContext ctx) {
-
-		Database database = manager.getDatabase(sessionId);
+		Database database = getDatabase();
 		Table table = database.getTable(ctx.table_name().getText());
 
 		/*
@@ -325,7 +340,8 @@ public class myListener extends SQLBaseListener{
         K_SELECT ( K_DISTINCT | K_ALL )? result_column ( ',' result_column )*
         K_FROM table_query ( ',' table_query )* ( K_WHERE multiple_condition )? ;
         */
-		Database database = manager.getDatabase(sessionId);
+		Database database = getDatabase();
+
 		resp.rowList = new ArrayList<>();
 		resp.columnsList = new ArrayList<>();
 		ArrayList<String> resultTables = new ArrayList<>();//列来自什么表 tablename
@@ -542,11 +558,24 @@ public class myListener extends SQLBaseListener{
 			}
 			catch (Exception e){
 				//
+				return;
 			}
 		}
 		for (String resultRow : resultRows)
 			resp.rowList.add(Arrays.asList(resultRow.split(",")));
 
+	}
+
+	public Database getDatabase(){
+		Database database;
+		if(manager.isTransaction(sessionId)) {
+			System.out.println("transaction");
+			database = manager.getTempDatabase(sessionId);
+		}
+		else{
+			database = manager.getDatabase(sessionId);
+		}
+		return database;
 	}
 
 	public ExecuteStatementResp getResult(){

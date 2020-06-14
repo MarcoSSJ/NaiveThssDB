@@ -21,32 +21,6 @@ public class Table implements Iterable<Row>, Serializable {
     public BPlusTree<Entry, Row> index;
     public int primaryIndex;
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
-        Column column = new Column("c1", ColumnType.INT, 1, false, 100);
-        Column[] columns = {column};
-        Table table = new Table("testdb", "testtable", columns);
-        Entry entry = new Entry("data");
-        table.delete(entry);
-        table.recover();
-        table.delete(entry);
-    /*Entry entry = new Entry("data");
-    Entry[] entries = {entry};
-    Row row = new Row(entries);
-    table.insert(row);
-    System.out.println(table);
-    table.serialize();
-    table.deserialize();
-    table.delete(entry);
-    String name = "./data/" + table.databaseName + '/' + table.tableName + "0";
-    FileInputStream fileIn = new FileInputStream(name);
-    ObjectInputStream in = new ObjectInputStream(fileIn);
-    Table t1 = (Table) in.readObject();
-    t1.delete(entry);
-    t1.delete(entry);
-    System.out.println(t1.tableName);
-    in.close();
-    fileIn.close();*/
-    }
 
     public Table(String databaseName, String tableName, Column[] columns) throws IOException, ClassNotFoundException {
         // TODO
